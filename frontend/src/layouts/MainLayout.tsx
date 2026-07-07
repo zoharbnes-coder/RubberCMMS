@@ -1,14 +1,21 @@
 import { Box, CssBaseline } from "@mui/material";
 import type { ReactNode } from "react";
+import { NavLink } from "react-router-dom";
 
-type MainLayoutProps = {
-  children: ReactNode;
-};
+const menuItems = [
+  { label: "Control Center", path: "/" },
+  { label: "קריאות", path: "/workorders" },
+  { label: "מכונות", path: "/machines" },
+  { label: "Analytics", path: "/analytics" },
+  { label: "היסטוריה", path: "/history" },
+  { label: "הגדרות", path: "/settings" },
+];
 
-export function MainLayout({ children }: MainLayoutProps) {
+export function MainLayout({ children }: { children: ReactNode }) {
   return (
     <Box dir="rtl" sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <CssBaseline />
+
       <Box
         component="header"
         sx={{
@@ -36,12 +43,24 @@ export function MainLayout({ children }: MainLayoutProps) {
             p: 2,
           }}
         >
-          <Box sx={{ py: 1.5, fontWeight: 800 }}>Control Center</Box>
-          <Box sx={{ py: 1.5, fontWeight: 800 }}>קריאות</Box>
-          <Box sx={{ py: 1.5, fontWeight: 800 }}>מכונות</Box>
-          <Box sx={{ py: 1.5, fontWeight: 800 }}>Analytics</Box>
-          <Box sx={{ py: 1.5, fontWeight: 800 }}>היסטוריה</Box>
-          <Box sx={{ py: 1.5, fontWeight: 800 }}>הגדרות</Box>
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              style={({ isActive }) => ({
+                display: "block",
+                padding: "14px 12px",
+                marginBottom: 6,
+                borderRadius: 10,
+                color: "white",
+                textDecoration: "none",
+                fontWeight: 800,
+                background: isActive ? "rgba(255,255,255,0.16)" : "transparent",
+              })}
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </Box>
 
         <Box component="main" sx={{ flex: 1, p: 3 }}>
