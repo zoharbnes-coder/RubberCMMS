@@ -1,11 +1,9 @@
-import { Box, Card, CardContent, Typography } from "@mui/material";
-
-const stats = [
-  { title: "קריאות פתוחות", value: "14", color: "#2563EB" },
-  { title: "מכונות מושבתות", value: "2", color: "#DC2626" },
-  { title: "זמינות", value: "96.8%", color: "#16A34A" },
-  { title: "נסגרו היום", value: "18", color: "#16A34A" },
-];
+import { Box, Typography } from "@mui/material";
+import KpiCard from "../components/cards/KpiCard";
+import OpenCalls from "../components/dashboard/OpenCalls";
+import TopDowntime from "../components/dashboard/TopDowntime";
+import PlantOverview from "../components/dashboard/PlantOverview";
+import { dashboardStats } from "../data/dashboardData";
 
 export default function Dashboard() {
   return (
@@ -27,26 +25,41 @@ export default function Dashboard() {
             md: "repeat(4, 1fr)",
           },
           gap: 3,
+          mb: 3,
         }}
       >
-        {stats.map((item) => (
-          <Card key={item.title} sx={{ borderRadius: 4 }}>
-            <CardContent>
-              <Typography component="div" sx={{ color: "text.secondary", mb: 1 }}>
-                {item.title}
-              </Typography>
+        {dashboardStats.map((item) => {
+          const Icon = item.icon;
 
-              <Typography
-                component="div"
-                variant="h3"
-                sx={{ fontWeight: 900, color: item.color }}
-              >
-                {item.value}
-              </Typography>
-            </CardContent>
-          </Card>
-        ))}
+          return (
+            <KpiCard
+              key={item.title}
+              title={item.title}
+              value={item.value}
+              color={item.color}
+              icon={<Icon fontSize="large" />}
+              subtitle={item.subtitle}
+            />
+          );
+        })}
       </Box>
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            lg: "2fr 1fr",
+          },
+          gap: 3,
+          mb: 3,
+        }}
+      >
+        <OpenCalls />
+        <TopDowntime />
+      </Box>
+
+      <PlantOverview />
     </Box>
   );
 }

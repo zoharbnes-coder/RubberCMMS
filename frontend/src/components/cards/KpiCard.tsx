@@ -1,25 +1,31 @@
-import { Box, Card, CardContent, Typography } from "@mui/material";
+import { Card, CardContent, Typography, Box } from "@mui/material";
 import type { ReactNode } from "react";
 
 type KpiCardProps = {
   title: string;
   value: string;
-  icon?: ReactNode;
   color: string;
+  icon?: ReactNode;
   subtitle?: string;
 };
 
-export function KpiCard({ title, value, icon, color, subtitle }: KpiCardProps) {
+export default function KpiCard({
+  title,
+  value,
+  color,
+  icon,
+  subtitle,
+}: KpiCardProps) {
   return (
     <Card
       sx={{
-        height: "100%",
-        borderRadius: 4,
-        boxShadow: "0 8px 24px rgba(15,23,42,0.08)",
+        borderRadius: 5,
+        boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
+        minHeight: 130,
       }}
     >
       <CardContent>
-        <Box sx={{ color, mb: 1, fontSize: 28 }}>{icon}</Box>
+        <Box sx={{ color, mb: 1 }}>{icon}</Box>
 
         <Typography component="div" sx={{ color: "text.secondary", fontWeight: 800 }}>
           {title}
@@ -30,7 +36,7 @@ export function KpiCard({ title, value, icon, color, subtitle }: KpiCardProps) {
         </Typography>
 
         {subtitle && (
-          <Typography component="div" sx={{ color: "text.secondary", fontSize: 13, mt: 1 }}>
+          <Typography component="div" sx={{ color: "text.secondary", mt: 1, fontSize: 13 }}>
             {subtitle}
           </Typography>
         )}
