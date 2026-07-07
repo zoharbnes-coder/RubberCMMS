@@ -1,46 +1,43 @@
-import { Box, CssBaseline, Typography } from "@mui/material";
+import { ThemeProvider } from "@mui/material/styles";
+import { CssBaseline, Box, Typography } from "@mui/material";
+import { appTheme } from "./theme/theme";
 
 export default function App() {
   return (
-    <>
+    <ThemeProvider theme={appTheme}>
       <CssBaseline />
+
       <Box
         dir="rtl"
         sx={{
           minHeight: "100vh",
-          fontFamily: "Arial",
-          background: "#f4f6f8",
+          bgcolor: "background.default",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          textAlign: "center",
         }}
       >
-        <Box sx={{ textAlign: "center" }}>
+        <Box>
           <Typography
             component="h1"
-            variant="h2"
-            sx={{ fontWeight: 800, color: "#0f172a" }}
+            variant="h4"
+            sx={{ fontWeight: 900 }}
           >
             RubberCMMS
           </Typography>
 
           <Typography
-            component="h2"
-            variant="h5"
-            sx={{ color: "#475569", mt: 2 }}
+            component="p"
+            sx={{
+              color: "text.secondary",
+              mt: 1,
+            }}
           >
-            Maintenance Intelligence Platform
-          </Typography>
-
-          <Typography
-            component="h3"
-            variant="h6"
-            sx={{ color: "#64748b", mt: 4 }}
-          >
-            מערכת ניהול אחזקה חכמה
+            Design System Foundation
           </Typography>
         </Box>
       </Box>
-    </>
+    </ThemeProvider>
   );
 }
