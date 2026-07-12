@@ -16,12 +16,9 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import NewWorkOrder from "./pages/NewWorkOrder";
 import WorkOrders from "./pages/WorkOrders";
+import Machines from "./pages/Machines";
 
 import type { AppUser } from "./data/users";
-
-function Machines() {
-  return <h1>מכונות</h1>;
-}
 
 function Analytics() {
   return <h1>Analytics</h1>;

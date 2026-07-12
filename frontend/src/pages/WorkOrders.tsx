@@ -8,7 +8,12 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useSearchParams } from "react-router-dom";
 
 import WorkOrderDrawer from "../components/workorders/WorkOrderDrawer";
 import type { AppUser } from "../data/users";
@@ -53,7 +58,9 @@ function getStatusColor(
   return "info";
 }
 
-function getPriorityLabel(priority: WorkOrderPriority) {
+function getPriorityLabel(
+  priority: WorkOrderPriority
+) {
   if (priority === "high") {
     return "גבוהה";
   }
@@ -65,7 +72,9 @@ function getPriorityLabel(priority: WorkOrderPriority) {
   return "בינונית";
 }
 
-function getPriorityColor(priority: WorkOrderPriority) {
+function getPriorityColor(
+  priority: WorkOrderPriority
+) {
   if (priority === "high") {
     return "#DC2626";
   }
@@ -100,9 +109,11 @@ function getDuration(
   );
 
   const days = Math.floor(totalMinutes / 1440);
+
   const hours = Math.floor(
     (totalMinutes % 1440) / 60
   );
+
   const minutes = totalMinutes % 60;
 
   if (days > 0) {
@@ -112,13 +123,19 @@ function getDuration(
     )}:${String(minutes).padStart(2, "0")}`;
   }
 
-  return `${String(hours).padStart(2, "0")}:${String(
-    minutes
-  ).padStart(2, "0")}`;
+  return `${String(hours).padStart(
+    2,
+    "0"
+  )}:${String(minutes).padStart(2, "0")}`;
 }
 
-function sortWorkOrders(workOrders: WorkOrder[]) {
-  const priorityRank: Record<WorkOrderPriority, number> = {
+function sortWorkOrders(
+  workOrders: WorkOrder[]
+) {
+  const priorityRank: Record<
+    WorkOrderPriority,
+    number
+  > = {
     high: 1,
     medium: 2,
     low: 3,
@@ -156,133 +173,216 @@ function sortWorkOrders(workOrders: WorkOrder[]) {
 export default function WorkOrders({
   currentUser,
 }: WorkOrdersProps) {
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(
-    sortWorkOrders(getWorkOrders())
-  );
+  const [searchParams, setSearchParams] =
+    useSearchParams();
 
-  const [selectedWorkOrder, setSelectedWorkOrder] =
-    useState<WorkOrder | null>(null);
+  const [workOrders, setWorkOrders] = useState<
+    WorkOrder[]
+  >(() => sortWorkOrders(getWorkOrders()));
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [
+    selectedWorkOrder,
+    setSelectedWorkOrder,
+  ] = useState<WorkOrder | null>(null);
 
-  const [searchText, setSearchText] = useState("");
+  const [drawerOpen, setDrawerOpen] =
+    useState(false);
+
+  const [searchText, setSearchText] =
+    useState("");
+
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("all");
+
   const [priorityFilter, setPriorityFilter] =
     useState<PriorityFilter>("all");
+
   const [downtimeFilter, setDowntimeFilter] =
     useState<DowntimeFilter>("all");
-  const [departmentFilter, setDepartmentFilter] =
-    useState("all");
+
+  const [
+    departmentFilter,
+    setDepartmentFilter,
+  ] = useState("all");
+
+  const requestedWorkOrderId =
+    searchParams.get("open");
+
+  useEffect(() => {
+    if (!requestedWorkOrderId) {
+      return;
+    }
+
+    const requestedWorkOrder =
+      workOrders.find(
+        (workOrder) =>
+          workOrder.id === requestedWorkOrderId
+      );
+
+    if (!requestedWorkOrder) {
+      return;
+    }
+
+    setSelectedWorkOrder(
+      requestedWorkOrder
+    );
+
+    setDrawerOpen(true);
+  }, [
+    requestedWorkOrderId,
+    workOrders,
+  ]);
 
   const departments = useMemo(
     () =>
       Array.from(
         new Set(
           workOrders.map(
-            (workOrder) => workOrder.department
+            (workOrder) =>
+              workOrder.department
           )
         )
       ).sort(),
     [workOrders]
   );
 
-  const filteredWorkOrders = useMemo(() => {
-    const normalizedSearch = searchText
-      .trim()
-      .toLowerCase();
+  const filteredWorkOrders =
+    useMemo(() => {
+      const normalizedSearch =
+        searchText
+          .trim()
+          .toLowerCase();
 
-    return workOrders.filter((workOrder) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        workOrder.workOrderNumber
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        workOrder.machineCode
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        workOrder.machineDisplayNumber
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        workOrder.machineName
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        workOrder.faultDescription
-          .toLowerCase()
-          .includes(normalizedSearch);
+      return workOrders.filter(
+        (workOrder) => {
+          const matchesSearch =
+            !normalizedSearch ||
+            workOrder.workOrderNumber
+              .toLowerCase()
+              .includes(normalizedSearch) ||
+            workOrder.machineCode
+              .toLowerCase()
+              .includes(normalizedSearch) ||
+            workOrder.machineDisplayNumber
+              .toLowerCase()
+              .includes(normalizedSearch) ||
+            workOrder.machineName
+              .toLowerCase()
+              .includes(normalizedSearch) ||
+            workOrder.faultDescription
+              .toLowerCase()
+              .includes(normalizedSearch);
 
-      const matchesStatus =
-        statusFilter === "all" ||
-        workOrder.status === statusFilter;
+          const matchesStatus =
+            statusFilter === "all" ||
+            workOrder.status ===
+              statusFilter;
 
-      const matchesPriority =
-        priorityFilter === "all" ||
-        workOrder.priority === priorityFilter;
+          const matchesPriority =
+            priorityFilter === "all" ||
+            workOrder.priority ===
+              priorityFilter;
 
-      const matchesDepartment =
-        departmentFilter === "all" ||
-        workOrder.department === departmentFilter;
+          const matchesDepartment =
+            departmentFilter === "all" ||
+            workOrder.department ===
+              departmentFilter;
 
-      const matchesDowntime =
-        downtimeFilter === "all" ||
-        (downtimeFilter === "yes" &&
-          workOrder.isDowntime) ||
-        (downtimeFilter === "no" &&
-          !workOrder.isDowntime);
+          const matchesDowntime =
+            downtimeFilter === "all" ||
+            (downtimeFilter === "yes" &&
+              workOrder.isDowntime) ||
+            (downtimeFilter === "no" &&
+              !workOrder.isDowntime);
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesPriority &&
-        matchesDepartment &&
-        matchesDowntime
+          return (
+            matchesSearch &&
+            matchesStatus &&
+            matchesPriority &&
+            matchesDepartment &&
+            matchesDowntime
+          );
+        }
       );
-    });
-  }, [
-    departmentFilter,
-    downtimeFilter,
-    priorityFilter,
-    searchText,
-    statusFilter,
-    workOrders,
-  ]);
+    }, [
+      departmentFilter,
+      downtimeFilter,
+      priorityFilter,
+      searchText,
+      statusFilter,
+      workOrders,
+    ]);
 
-  function openWorkOrder(workOrder: WorkOrder) {
+  function openWorkOrder(
+    workOrder: WorkOrder
+  ) {
     setSelectedWorkOrder(workOrder);
     setDrawerOpen(true);
+
+    setSearchParams(
+      {
+        open: workOrder.id,
+      },
+      {
+        replace: true,
+      }
+    );
+  }
+
+  function closeDrawer() {
+    setDrawerOpen(false);
+    setSelectedWorkOrder(null);
+
+    setSearchParams(
+      {},
+      {
+        replace: true,
+      }
+    );
   }
 
   function handleUpdated(
     updatedWorkOrder: WorkOrder
   ) {
-    setWorkOrders((currentWorkOrders) =>
-      sortWorkOrders(
-        currentWorkOrders.map((workOrder) =>
-          workOrder.id === updatedWorkOrder.id
-            ? updatedWorkOrder
-            : workOrder
+    setWorkOrders(
+      (currentWorkOrders) =>
+        sortWorkOrders(
+          currentWorkOrders.map(
+            (workOrder) =>
+              workOrder.id ===
+              updatedWorkOrder.id
+                ? updatedWorkOrder
+                : workOrder
+          )
         )
-      )
     );
 
-    setSelectedWorkOrder(updatedWorkOrder);
+    setSelectedWorkOrder(
+      updatedWorkOrder
+    );
   }
 
   function refreshWorkOrders() {
-    const refreshedWorkOrders = sortWorkOrders(
-      getWorkOrders()
-    );
+    const refreshedWorkOrders =
+      sortWorkOrders(
+        getWorkOrders()
+      );
 
-    setWorkOrders(refreshedWorkOrders);
+    setWorkOrders(
+      refreshedWorkOrders
+    );
 
     if (selectedWorkOrder) {
       const refreshedSelected =
         refreshedWorkOrders.find(
           (workOrder) =>
-            workOrder.id === selectedWorkOrder.id
+            workOrder.id ===
+            selectedWorkOrder.id
         ) ?? null;
 
-      setSelectedWorkOrder(refreshedSelected);
+      setSelectedWorkOrder(
+        refreshedSelected
+      );
     }
   }
 
@@ -299,7 +399,8 @@ export default function WorkOrders({
       <Box
         sx={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent:
+            "space-between",
           alignItems: {
             xs: "flex-start",
             sm: "center",
@@ -327,16 +428,20 @@ export default function WorkOrders({
           <Typography
             component="p"
             sx={{
-              color: "text.secondary",
+              color:
+                "text.secondary",
             }}
           >
-            צפייה, חיפוש וטיפול בקריאות האחזקה.
+            צפייה, חיפוש וטיפול
+            בקריאות האחזקה.
           </Typography>
         </Box>
 
         <Button
           variant="outlined"
-          onClick={refreshWorkOrders}
+          onClick={
+            refreshWorkOrders
+          }
           sx={{
             minHeight: 46,
             fontWeight: 900,
@@ -372,7 +477,9 @@ export default function WorkOrders({
               placeholder="מספר דוח, מכונה או תיאור..."
               value={searchText}
               onChange={(event) =>
-                setSearchText(event.target.value)
+                setSearchText(
+                  event.target.value
+                )
               }
             />
 
@@ -383,16 +490,26 @@ export default function WorkOrders({
               value={statusFilter}
               onChange={(event) =>
                 setStatusFilter(
-                  event.target.value as StatusFilter
+                  event.target
+                    .value as StatusFilter
                 )
               }
             >
-              <MenuItem value="all">הכול</MenuItem>
-              <MenuItem value="open">פתוח</MenuItem>
+              <MenuItem value="all">
+                הכול
+              </MenuItem>
+
+              <MenuItem value="open">
+                פתוח
+              </MenuItem>
+
               <MenuItem value="paused">
                 מושהה
               </MenuItem>
-              <MenuItem value="closed">סגור</MenuItem>
+
+              <MenuItem value="closed">
+                סגור
+              </MenuItem>
             </TextField>
 
             <TextField
@@ -407,12 +524,21 @@ export default function WorkOrders({
                 )
               }
             >
-              <MenuItem value="all">הכול</MenuItem>
-              <MenuItem value="high">גבוהה</MenuItem>
+              <MenuItem value="all">
+                הכול
+              </MenuItem>
+
+              <MenuItem value="high">
+                גבוהה
+              </MenuItem>
+
               <MenuItem value="medium">
                 בינונית
               </MenuItem>
-              <MenuItem value="low">נמוכה</MenuItem>
+
+              <MenuItem value="low">
+                נמוכה
+              </MenuItem>
             </TextField>
 
             <TextField
@@ -422,20 +548,31 @@ export default function WorkOrders({
               value={downtimeFilter}
               onChange={(event) =>
                 setDowntimeFilter(
-                  event.target.value as DowntimeFilter
+                  event.target
+                    .value as DowntimeFilter
                 )
               }
             >
-              <MenuItem value="all">הכול</MenuItem>
-              <MenuItem value="yes">כן</MenuItem>
-              <MenuItem value="no">לא</MenuItem>
+              <MenuItem value="all">
+                הכול
+              </MenuItem>
+
+              <MenuItem value="yes">
+                כן
+              </MenuItem>
+
+              <MenuItem value="no">
+                לא
+              </MenuItem>
             </TextField>
 
             <TextField
               select
               fullWidth
               label="מחלקה"
-              value={departmentFilter}
+              value={
+                departmentFilter
+              }
               onChange={(event) =>
                 setDepartmentFilter(
                   event.target.value
@@ -446,14 +583,16 @@ export default function WorkOrders({
                 כל המחלקות
               </MenuItem>
 
-              {departments.map((department) => (
-                <MenuItem
-                  key={department}
-                  value={department}
-                >
-                  {department}
-                </MenuItem>
-              ))}
+              {departments.map(
+                (department) => (
+                  <MenuItem
+                    key={department}
+                    value={department}
+                  >
+                    {department}
+                  </MenuItem>
+                )
+              )}
             </TextField>
 
             <Button
@@ -477,7 +616,9 @@ export default function WorkOrders({
           mb: 2,
         }}
       >
-        נמצאו {filteredWorkOrders.length} קריאות
+        נמצאו{" "}
+        {filteredWorkOrders.length}{" "}
+        קריאות
       </Typography>
 
       <Box
@@ -487,217 +628,255 @@ export default function WorkOrders({
           gap: 1.5,
         }}
       >
-        {filteredWorkOrders.length === 0 ? (
-          <Card sx={{ borderRadius: 4 }}>
+        {filteredWorkOrders.length ===
+        0 ? (
+          <Card
+            sx={{
+              borderRadius: 4,
+            }}
+          >
             <CardContent>
               <Typography
                 component="p"
                 sx={{
-                  color: "text.secondary",
+                  color:
+                    "text.secondary",
                   textAlign: "center",
                   py: 4,
                 }}
               >
-                לא נמצאו קריאות מתאימות.
+                לא נמצאו קריאות
+                מתאימות.
               </Typography>
             </CardContent>
           </Card>
         ) : (
-          filteredWorkOrders.map((workOrder) => {
-            const priorityColor =
-              getPriorityColor(workOrder.priority);
+          filteredWorkOrders.map(
+            (workOrder) => {
+              const priorityColor =
+                getPriorityColor(
+                  workOrder.priority
+                );
 
-            return (
-              <Card
-                key={workOrder.id}
-                sx={{
-                  borderRadius: 4,
-                  borderRight: `8px solid ${priorityColor}`,
-                  boxShadow:
-                    "0 5px 18px rgba(15,23,42,0.07)",
-                }}
-              >
-                <CardContent>
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: {
-                        xs: "1fr",
-                        md: "1.1fr 1.4fr 1.5fr 1fr 0.8fr auto",
-                      },
-                      gap: 2,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Box>
-                      <Typography
-                        component="div"
-                        sx={{
-                          fontWeight: 900,
-                          fontSize: 16,
-                        }}
-                      >
-                        {workOrder.workOrderNumber}
-                      </Typography>
-
-                      <Typography
-                        component="div"
-                        sx={{
-                          color: "text.secondary",
-                          fontSize: 13,
-                        }}
-                      >
-                        {formatDate(
-                          workOrder.openedAt
-                        )}
-                      </Typography>
-                    </Box>
-
-                    <Box>
-                      <Typography
-                        component="div"
-                        sx={{ fontWeight: 900 }}
-                      >
-                        {
-                          workOrder.machineDisplayNumber
-                        }{" "}
-                        - {workOrder.machineName}
-                      </Typography>
-
-                      <Typography
-                        component="div"
-                        sx={{
-                          color: "text.secondary",
-                          fontSize: 13,
-                        }}
-                      >
-                        {workOrder.department}
-                      </Typography>
-                    </Box>
-
-                    <Box>
-                      <Typography
-                        component="div"
-                        sx={{
-                          color: "text.secondary",
-                          fontSize: 12,
-                        }}
-                      >
-                        תיאור התקלה
-                      </Typography>
-
-                      <Typography
-                        component="div"
-                        sx={{
-                          fontWeight: 700,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {workOrder.faultDescription}
-                      </Typography>
-                    </Box>
-
+              return (
+                <Card
+                  key={workOrder.id}
+                  sx={{
+                    borderRadius: 4,
+                    borderRight: `8px solid ${priorityColor}`,
+                    boxShadow:
+                      "0 5px 18px rgba(15,23,42,0.07)",
+                  }}
+                >
+                  <CardContent>
                     <Box
                       sx={{
-                        display: "flex",
-                        gap: 1,
-                        flexWrap: "wrap",
+                        display: "grid",
+                        gridTemplateColumns:
+                          {
+                            xs: "1fr",
+                            md: "1.1fr 1.4fr 1.5fr 1fr 0.8fr auto",
+                          },
+                        gap: 2,
+                        alignItems:
+                          "center",
                       }}
                     >
-                      <Chip
-                        label={getStatusLabel(
-                          workOrder.status
-                        )}
-                        color={getStatusColor(
-                          workOrder.status
-                        )}
-                        size="small"
-                      />
+                      <Box>
+                        <Typography
+                          component="div"
+                          sx={{
+                            fontWeight: 900,
+                            fontSize: 16,
+                          }}
+                        >
+                          {
+                            workOrder.workOrderNumber
+                          }
+                        </Typography>
 
-                      <Chip
-                        label={getPriorityLabel(
-                          workOrder.priority
-                        )}
-                        size="small"
+                        <Typography
+                          component="div"
+                          sx={{
+                            color:
+                              "text.secondary",
+                            fontSize: 13,
+                          }}
+                        >
+                          {formatDate(
+                            workOrder.openedAt
+                          )}
+                        </Typography>
+                      </Box>
+
+                      <Box>
+                        <Typography
+                          component="div"
+                          sx={{
+                            fontWeight: 900,
+                          }}
+                        >
+                          {
+                            workOrder.machineDisplayNumber
+                          }{" "}
+                          -{" "}
+                          {
+                            workOrder.machineName
+                          }
+                        </Typography>
+
+                        <Typography
+                          component="div"
+                          sx={{
+                            color:
+                              "text.secondary",
+                            fontSize: 13,
+                          }}
+                        >
+                          {
+                            workOrder.department
+                          }
+                        </Typography>
+                      </Box>
+
+                      <Box>
+                        <Typography
+                          component="div"
+                          sx={{
+                            color:
+                              "text.secondary",
+                            fontSize: 12,
+                          }}
+                        >
+                          תיאור התקלה
+                        </Typography>
+
+                        <Typography
+                          component="div"
+                          sx={{
+                            fontWeight: 700,
+                            overflow:
+                              "hidden",
+                            textOverflow:
+                              "ellipsis",
+                            whiteSpace:
+                              "nowrap",
+                          }}
+                        >
+                          {
+                            workOrder.faultDescription
+                          }
+                        </Typography>
+                      </Box>
+
+                      <Box
                         sx={{
-                          bgcolor: priorityColor,
-                          color: "white",
-                          fontWeight: 900,
+                          display: "flex",
+                          gap: 1,
+                          flexWrap: "wrap",
                         }}
-                      />
-
-                      {workOrder.isDowntime && (
+                      >
                         <Chip
-                          label="משביתה"
-                          color="error"
+                          label={getStatusLabel(
+                            workOrder.status
+                          )}
+                          color={getStatusColor(
+                            workOrder.status
+                          )}
                           size="small"
                         />
-                      )}
-                    </Box>
 
-                    <Box>
-                      <Typography
-                        component="div"
-                        sx={{
-                          color: "text.secondary",
-                          fontSize: 12,
-                        }}
-                      >
-                        {workOrder.status === "closed"
-                          ? "זמן השבתה"
-                          : "זמן פתוח"}
-                      </Typography>
+                        <Chip
+                          label={getPriorityLabel(
+                            workOrder.priority
+                          )}
+                          size="small"
+                          sx={{
+                            bgcolor:
+                              priorityColor,
+                            color: "white",
+                            fontWeight: 900,
+                          }}
+                        />
 
-                      <Typography
-                        component="div"
-                        sx={{
-                          fontWeight: 900,
-                          fontSize: 18,
-                          color:
-                            workOrder.status === "closed"
-                              ? "text.secondary"
-                              : priorityColor,
-                        }}
-                      >
-                        {getDuration(
-                          workOrder.openedAt,
-                          workOrder.closedAt
+                        {workOrder.isDowntime && (
+                          <Chip
+                            label="משביתה"
+                            color="error"
+                            size="small"
+                          />
                         )}
-                      </Typography>
-                    </Box>
+                      </Box>
 
-                    <Button
-                      variant="contained"
-                      onClick={() =>
-                        openWorkOrder(workOrder)
-                      }
-                      sx={{
-                        minHeight: 44,
-                        fontWeight: 900,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      פתח לטיפול
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            );
-          })
+                      <Box>
+                        <Typography
+                          component="div"
+                          sx={{
+                            color:
+                              "text.secondary",
+                            fontSize: 12,
+                          }}
+                        >
+                          {workOrder.status ===
+                          "closed"
+                            ? "זמן השבתה"
+                            : "זמן פתוח"}
+                        </Typography>
+
+                        <Typography
+                          component="div"
+                          sx={{
+                            fontWeight: 900,
+                            fontSize: 18,
+                            color:
+                              workOrder.status ===
+                              "closed"
+                                ? "text.secondary"
+                                : priorityColor,
+                          }}
+                        >
+                          {getDuration(
+                            workOrder.openedAt,
+                            workOrder.closedAt
+                          )}
+                        </Typography>
+                      </Box>
+
+                      <Button
+                        variant="contained"
+                        onClick={() =>
+                          openWorkOrder(
+                            workOrder
+                          )
+                        }
+                        sx={{
+                          minHeight: 44,
+                          fontWeight: 900,
+                          whiteSpace:
+                            "nowrap",
+                        }}
+                      >
+                        פתח לטיפול
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              );
+            }
+          )
         )}
       </Box>
 
       <WorkOrderDrawer
         open={drawerOpen}
-        workOrder={selectedWorkOrder}
+        workOrder={
+          selectedWorkOrder
+        }
         currentUser={currentUser}
-        onClose={() => {
-          setDrawerOpen(false);
-          setSelectedWorkOrder(null);
-        }}
-        onUpdated={handleUpdated}
+        onClose={closeDrawer}
+        onUpdated={
+          handleUpdated
+        }
       />
     </Box>
   );
