@@ -17,6 +17,7 @@ import Login from "./pages/Login";
 import NewWorkOrder from "./pages/NewWorkOrder";
 import WorkOrders from "./pages/WorkOrders";
 import Machines from "./pages/Machines";
+import MachineDetails from "./pages/MachineDetails";
 
 import type { AppUser } from "./data/users";
 
@@ -137,6 +138,18 @@ export default function App() {
                           permission="view_machines"
                         >
                           <Machines />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="/machines/:machineCode"
+                      element={
+                        <ProtectedRoute
+                          currentUserRole={currentUser.role}
+                          permission="view_machines"
+                        >
+                          <MachineDetails />
                         </ProtectedRoute>
                       }
                     />

@@ -1,7 +1,15 @@
-import type { Machine, MachineStatus } from "../types/machine";
-import { getActiveMachines, getMachineByCode } from "./machineRepository";
-import { getWorkOrders } from "./workOrderService";
+import type {
+  Machine,
+  MachineStatus,
+} from "../types/machine";
 import type { WorkOrder } from "../types/workOrder";
+
+import {
+  getActiveMachines,
+  getMachineByAssetNumber,
+  getMachineByCode,
+} from "./machineRepository";
+import { getWorkOrders } from "./workOrderService";
 
 function calculateMachineStatus(
   workOrders: WorkOrder[]
@@ -10,7 +18,11 @@ function calculateMachineStatus(
     (workOrder) => workOrder.status !== "closed"
   );
 
-  if (activeWorkOrders.some((workOrder) => workOrder.isDowntime)) {
+  if (
+    activeWorkOrders.some(
+      (workOrder) => workOrder.isDowntime
+    )
+  ) {
     return "alarm";
   }
 
@@ -27,7 +39,9 @@ function calculateAvailability(
   const downtimeMinutes = workOrders
     .filter((workOrder) => workOrder.isDowntime)
     .reduce((total, workOrder) => {
-      const startTime = new Date(workOrder.openedAt).getTime();
+      const startTime = new Date(
+        workOrder.openedAt
+      ).getTime();
 
       const endTime = workOrder.closedAt
         ? new Date(workOrder.closedAt).getTime()
@@ -41,15 +55,25 @@ function calculateAvailability(
         return total;
       }
 
-      return total + Math.floor((endTime - startTime) / 60000);
+      return (
+        total +
+        Math.floor(
+          (endTime - startTime) / 60000
+        )
+      );
     }, 0);
 
   const plannedMinutes = 9 * 60;
 
   const availability =
-    ((plannedMinutes - downtimeMinutes) / plannedMinutes) * 100;
+    ((plannedMinutes - downtimeMinutes) /
+      plannedMinutes) *
+    100;
 
-  return Math.max(0, Math.min(100, availability));
+  return Math.max(
+    0,
+    Math.min(100, availability)
+  );
 }
 
 function calculateMttrHours(
@@ -57,38 +81,55 @@ function calculateMttrHours(
 ): number {
   const closedWorkOrders = workOrders.filter(
     (workOrder) =>
-      workOrder.closedAt &&
-      workOrder.takenAt
+      workOrder.closedAt !== null &&
+      workOrder.takenAt !== null
   );
 
   if (closedWorkOrders.length === 0) {
     return 0;
   }
 
-  const totalRepairMinutes = closedWorkOrders.reduce(
-    (total, workOrder) => {
-      const startTime = new Date(
-        workOrder.takenAt as string
-      ).getTime();
+  const totalRepairMinutes =
+    closedWorkOrders.reduce(
+      (total, workOrder) => {
+        if (
+          !workOrder.takenAt ||
+          !workOrder.closedAt
+        ) {
+          return total;
+        }
 
-      const endTime = new Date(
-        workOrder.closedAt as string
-      ).getTime();
+        const startTime = new Date(
+          workOrder.takenAt
+        ).getTime();
 
-      if (
-        Number.isNaN(startTime) ||
-        Number.isNaN(endTime) ||
-        endTime <= startTime
-      ) {
-        return total;
-      }
+        const endTime = new Date(
+          workOrder.closedAt
+        ).getTime();
 
-      return total + Math.floor((endTime - startTime) / 60000);
-    },
-    0
+        if (
+          Number.isNaN(startTime) ||
+          Number.isNaN(endTime) ||
+          endTime <= startTime
+        ) {
+          return total;
+        }
+
+        return (
+          total +
+          Math.floor(
+            (endTime - startTime) / 60000
+          )
+        );
+      },
+      0
+    );
+
+  return (
+    totalRepairMinutes /
+    closedWorkOrders.length /
+    60
   );
-
-  return totalRepairMinutes / closedWorkOrders.length / 60;
 }
 
 function calculateMtbfHours(
@@ -98,7 +139,7 @@ function calculateMtbfHours(
     .filter(
       (workOrder) =>
         workOrder.isDowntime &&
-        workOrder.closedAt
+        workOrder.closedAt !== null
     )
     .sort(
       (first, second) =>
@@ -141,7 +182,9 @@ function calculateMtbfHours(
     }
 
     intervals.push(
-      (currentOpenTime - previousCloseTime) / 3600000
+      (currentOpenTime -
+        previousCloseTime) /
+        3600000
     );
   }
 
@@ -150,50 +193,80 @@ function calculateMtbfHours(
   }
 
   return (
-    intervals.reduce((total, value) => total + value, 0) /
-    intervals.length
+    intervals.reduce(
+      (total, value) => total + value,
+      0
+    ) / intervals.length
   );
 }
 
-function enrichMachine(machine: Machine): Machine {
+function enrichMachine(
+  machine: Machine
+): Machine {
   const workOrders = getWorkOrders().filter(
     (workOrder) =>
-      workOrder.machineCode === machine.machineCode
+      workOrder.machineCode ===
+      machine.machineCode
   );
 
   const activeWorkOrders = workOrders.filter(
-    (workOrder) => workOrder.status !== "closed"
+    (workOrder) =>
+      workOrder.status !== "closed"
   );
 
-  const downtimeWorkOrders = activeWorkOrders.filter(
-    (workOrder) => workOrder.isDowntime
-  );
+  const downtimeWorkOrders =
+    activeWorkOrders.filter(
+      (workOrder) =>
+        workOrder.isDowntime
+    );
 
   return {
     ...machine,
 
-    status: calculateMachineStatus(workOrders),
+    status:
+      calculateMachineStatus(workOrders),
 
-    openWorkOrders: activeWorkOrders.length,
+    openWorkOrders:
+      activeWorkOrders.length,
 
-    downtimeWorkOrders: downtimeWorkOrders.length,
+    downtimeWorkOrders:
+      downtimeWorkOrders.length,
 
-    mttrHours: calculateMttrHours(workOrders),
+    mttrHours:
+      calculateMttrHours(workOrders),
 
-    mtbfHours: calculateMtbfHours(workOrders),
+    mtbfHours:
+      calculateMtbfHours(workOrders),
 
-    availability: calculateAvailability(workOrders),
+    availability:
+      calculateAvailability(workOrders),
   };
 }
 
 export function getLiveMachines(): Machine[] {
-  return getActiveMachines().map(enrichMachine);
+  return getActiveMachines().map(
+    enrichMachine
+  );
 }
 
 export function getLiveMachineByCode(
   machineCode: string
 ): Machine | undefined {
-  const machine = getMachineByCode(machineCode);
+  const machine =
+    getMachineByCode(machineCode);
+
+  if (!machine) {
+    return undefined;
+  }
+
+  return enrichMachine(machine);
+}
+
+export function getLiveMachineByAssetNumber(
+  assetNumber: string
+): Machine | undefined {
+  const machine =
+    getMachineByAssetNumber(assetNumber);
 
   if (!machine) {
     return undefined;
@@ -208,11 +281,16 @@ export function getMachineWorkOrders(
   return getWorkOrders()
     .filter(
       (workOrder) =>
-        workOrder.machineCode === machineCode
+        workOrder.machineCode ===
+        machineCode
     )
     .sort(
       (first, second) =>
-        new Date(second.openedAt).getTime() -
-        new Date(first.openedAt).getTime()
+        new Date(
+          second.openedAt
+        ).getTime() -
+        new Date(
+          first.openedAt
+        ).getTime()
     );
 }

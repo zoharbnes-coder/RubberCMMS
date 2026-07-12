@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { getLiveMachines } from "../services/machineService";
 import type {
@@ -80,6 +81,8 @@ function formatHours(value: number) {
 }
 
 export default function Machines() {
+  const navigate = useNavigate();
+
   const [machines] = useState<Machine[]>(getLiveMachines());
 
   const [searchText, setSearchText] = useState("");
@@ -111,9 +114,6 @@ export default function Machines() {
       const matchesSearch =
         !normalizedSearch ||
         machine.assetNumber
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        machine.machineCode
           .toLowerCase()
           .includes(normalizedSearch) ||
         machine.displayName
@@ -149,6 +149,14 @@ export default function Machines() {
     searchText,
     statusFilter,
   ]);
+
+  function openMachine(machine: Machine) {
+    navigate(
+      `/machines/${encodeURIComponent(
+        machine.assetNumber
+      )}`
+    );
+  }
 
   return (
     <Box dir="rtl">
@@ -196,7 +204,7 @@ export default function Machines() {
             <TextField
               fullWidth
               label="חיפוש מכונה"
-              placeholder="מספר, קוד או שם..."
+              placeholder="מספר או שם מכונה..."
               value={searchText}
               onChange={(event) =>
                 setSearchText(event.target.value)
@@ -261,9 +269,13 @@ export default function Machines() {
               }
             >
               <MenuItem value="all">הכול</MenuItem>
-              <MenuItem value="critical">קריטית</MenuItem>
+              <MenuItem value="critical">
+                קריטית
+              </MenuItem>
               <MenuItem value="high">גבוהה</MenuItem>
-              <MenuItem value="medium">בינונית</MenuItem>
+              <MenuItem value="medium">
+                בינונית
+              </MenuItem>
               <MenuItem value="low">נמוכה</MenuItem>
             </TextField>
           </Box>
@@ -294,8 +306,20 @@ export default function Machines() {
         {filteredMachines.map((machine) => (
           <Card
             key={machine.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => openMachine(machine)}
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" ||
+                event.key === " "
+              ) {
+                openMachine(machine);
+              }
+            }}
             sx={{
               borderRadius: 4,
+              cursor: "pointer",
               borderTop: "6px solid",
               borderTopColor:
                 machine.status === "alarm"
@@ -307,6 +331,17 @@ export default function Machines() {
                       : "#16A34A",
               boxShadow:
                 "0 8px 24px rgba(15,23,42,0.08)",
+              transition:
+                "transform 0.15s ease, box-shadow 0.15s ease",
+              "&:hover": {
+                transform: "translateY(-3px)",
+                boxShadow:
+                  "0 12px 30px rgba(15,23,42,0.14)",
+              },
+              "&:focus-visible": {
+                outline: "3px solid #2563EB",
+                outlineOffset: "3px",
+              },
             }}
           >
             <CardContent>
@@ -339,17 +374,6 @@ export default function Machines() {
                     }}
                   >
                     {machine.department}
-                  </Typography>
-
-                  <Typography
-                    component="div"
-                    sx={{
-                      color: "text.secondary",
-                      fontSize: 12,
-                      mt: 0.5,
-                    }}
-                  >
-                    קוד: {machine.machineCode}
                   </Typography>
                 </Box>
 
