@@ -58,6 +58,8 @@ export type DashboardSnapshot = {
   machineStatuses: DashboardMachineStatus[];
 };
 
+const SHIFT_MINUTES = 9 * 60;
+
 const priorityRank: Record<WorkOrderPriority, number> = {
   high: 1,
   medium: 2,
@@ -66,17 +68,13 @@ const priorityRank: Record<WorkOrderPriority, number> = {
 
 function startOfToday(): Date {
   const date = new Date();
-
   date.setHours(0, 0, 0, 0);
-
   return date;
 }
 
 function endOfToday(): Date {
   const date = new Date();
-
   date.setHours(23, 59, 59, 999);
-
   return date;
 }
 
@@ -160,18 +158,7 @@ function calculateAvailabilityToday(
   }
 
   const todayStart = startOfToday();
-  const now = new Date();
-
-  const elapsedTodayMinutes = Math.max(
-    1,
-    Math.floor(
-      (now.getTime() - todayStart.getTime()) /
-        60000
-    )
-  );
-
-  const availableMachineMinutes =
-    activeMachines.length * elapsedTodayMinutes;
+  const todayEnd = endOfToday();
 
   const downtimeMinutes = workOrders.reduce(
     (total, workOrder) =>
@@ -179,14 +166,17 @@ function calculateAvailabilityToday(
       getOverlappingMinutes(
         workOrder,
         todayStart,
-        now
+        todayEnd
       ),
     0
   );
 
+  const plannedMachineMinutes =
+    activeMachines.length * SHIFT_MINUTES;
+
   const availability =
-    ((availableMachineMinutes - downtimeMinutes) /
-      availableMachineMinutes) *
+    ((plannedMachineMinutes - downtimeMinutes) /
+      plannedMachineMinutes) *
     100;
 
   return {
@@ -260,18 +250,25 @@ function buildTopDowntimeMachines(
   workOrders
     .filter((workOrder) => workOrder.isDowntime)
     .forEach((workOrder) => {
-      const existing = downtimeByMachine.get(
-        workOrder.machineCode
-      );
-
       const downtimeMinutes = getElapsedMinutes(
         workOrder.openedAt,
         workOrder.closedAt
       );
 
+      const existing = downtimeByMachine.get(
+        workOrder.machineCode
+      );
+
       if (existing) {
-        existing.downtimeMinutes +=
-          downtimeMinutes;
+        downtimeByMachine.set(
+          workOrder.machineCode,
+          {
+            ...existing,
+            downtimeMinutes:
+              existing.downtimeMinutes +
+              downtimeMinutes,
+          }
+        );
 
         return;
       }
