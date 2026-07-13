@@ -98,10 +98,22 @@ export default function Dashboard() {
     setSnapshot(getDashboardSnapshot());
   }
 
-  function openWorkOrder(workOrderId: string) {
+  function openWorkOrder(
+    workOrderId: string
+  ) {
     navigate(
-      `/workorders?open=${encodeURIComponent(
+      `/workorders/${encodeURIComponent(
         workOrderId
+      )}`
+    );
+  }
+
+  function openMachine(
+    assetNumber: string
+  ) {
+    navigate(
+      `/machines/${encodeURIComponent(
+        assetNumber
       )}`
     );
   }
@@ -247,8 +259,7 @@ export default function Dashboard() {
           <Typography
             component="p"
             sx={{
-              color:
-                "text.secondary",
+              color: "text.secondary",
             }}
           >
             תמונת מצב אחזקה חיה על
@@ -258,8 +269,7 @@ export default function Dashboard() {
           <Typography
             component="div"
             sx={{
-              color:
-                "text.secondary",
+              color: "text.secondary",
               fontSize: 12,
               mt: 0.5,
             }}
@@ -373,9 +383,7 @@ export default function Dashboard() {
                             call.id
                           )
                         }
-                        onKeyDown={(
-                          event
-                        ) => {
+                        onKeyDown={(event) => {
                           if (
                             event.key ===
                               "Enter" ||
@@ -387,13 +395,11 @@ export default function Dashboard() {
                           }
                         }}
                         sx={{
-                          display:
-                            "grid",
-                          gridTemplateColumns:
-                            {
-                              xs: "1fr",
-                              md: "1.2fr 2fr auto auto",
-                            },
+                          display: "grid",
+                          gridTemplateColumns: {
+                            xs: "1fr",
+                            md: "1.2fr 2fr auto auto",
+                          },
                           gap: 2,
                           alignItems:
                             "center",
@@ -405,7 +411,7 @@ export default function Dashboard() {
                           cursor:
                             "pointer",
                           transition:
-                            "transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease",
+                            "transform 0.15s ease, box-shadow 0.15s ease",
                           "&:hover": {
                             bgcolor:
                               "#EEF2F7",
@@ -414,13 +420,12 @@ export default function Dashboard() {
                             boxShadow:
                               "0 6px 16px rgba(15,23,42,0.10)",
                           },
-                          "&:focus-visible":
-                            {
-                              outline:
-                                "3px solid #2563EB",
-                              outlineOffset:
-                                "2px",
-                            },
+                          "&:focus-visible": {
+                            outline:
+                              "3px solid #2563EB",
+                            outlineOffset:
+                              "2px",
+                          },
                         }}
                       >
                         <Box>
@@ -433,10 +438,7 @@ export default function Dashboard() {
                             {
                               call.machineDisplayNumber
                             }{" "}
-                            -{" "}
-                            {
-                              call.machineName
-                            }
+                            - {call.machineName}
                           </Typography>
 
                           <Typography
@@ -466,8 +468,7 @@ export default function Dashboard() {
 
                         <Box
                           sx={{
-                            display:
-                              "flex",
+                            display: "flex",
                             gap: 1,
                             flexWrap:
                               "wrap",
@@ -481,8 +482,7 @@ export default function Dashboard() {
                             sx={{
                               bgcolor:
                                 priorityColor,
-                              color:
-                                "white",
+                              color: "white",
                               fontWeight: 900,
                             }}
                           />
@@ -569,9 +569,26 @@ export default function Dashboard() {
                       key={
                         machine.machineCode
                       }
+                      role="button"
+                      tabIndex={0}
+                      onClick={() =>
+                        openMachine(
+                          machine.machineDisplayNumber
+                        )
+                      }
+                      onKeyDown={(event) => {
+                        if (
+                          event.key ===
+                            "Enter" ||
+                          event.key === " "
+                        ) {
+                          openMachine(
+                            machine.machineDisplayNumber
+                          );
+                        }
+                      }}
                       sx={{
-                        display:
-                          "flex",
+                        display: "flex",
                         justifyContent:
                           "space-between",
                         alignItems:
@@ -583,6 +600,11 @@ export default function Dashboard() {
                         p: 1.5,
                         borderRight:
                           "6px solid #DC2626",
+                        cursor: "pointer",
+                        "&:hover": {
+                          bgcolor:
+                            "#EEF2F7",
+                        },
                       }}
                     >
                       <Box>
@@ -682,15 +704,13 @@ export default function Dashboard() {
 
                   <Box
                     sx={{
-                      display:
-                        "grid",
-                      gridTemplateColumns:
-                        {
-                          xs: "1fr",
-                          sm: "repeat(2, minmax(0, 1fr))",
-                          lg: "repeat(3, minmax(0, 1fr))",
-                          xl: "repeat(4, minmax(0, 1fr))",
-                        },
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        sm: "repeat(2, minmax(0, 1fr))",
+                        lg: "repeat(3, minmax(0, 1fr))",
+                        xl: "repeat(4, minmax(0, 1fr))",
+                      },
                       gap: 1.5,
                     }}
                   >
@@ -706,14 +726,41 @@ export default function Dashboard() {
                             key={
                               machine.machineCode
                             }
+                            role="button"
+                            tabIndex={0}
+                            onClick={() =>
+                              openMachine(
+                                machine.machineDisplayNumber
+                              )
+                            }
+                            onKeyDown={(event) => {
+                              if (
+                                event.key ===
+                                  "Enter" ||
+                                event.key === " "
+                              ) {
+                                openMachine(
+                                  machine.machineDisplayNumber
+                                );
+                              }
+                            }}
                             sx={{
                               bgcolor:
                                 "#0F172A",
-                              color:
-                                "white",
+                              color: "white",
                               borderRadius: 3,
                               p: 2,
                               borderRight: `8px solid ${statusColor}`,
+                              cursor:
+                                "pointer",
+                              transition:
+                                "transform 0.15s ease, box-shadow 0.15s ease",
+                              "&:hover": {
+                                transform:
+                                  "translateY(-2px)",
+                                boxShadow:
+                                  "0 8px 20px rgba(15,23,42,0.20)",
+                              },
                             }}
                           >
                             <Typography

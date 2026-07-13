@@ -699,7 +699,7 @@ export default function MachineDetails() {
                     tabIndex={0}
                     onClick={() =>
                       navigate(
-                        `/workorders?open=${encodeURIComponent(
+                        `/workorders/${encodeURIComponent(
                           workOrder.id
                         )}`
                       )
@@ -710,7 +710,7 @@ export default function MachineDetails() {
                         event.key === " "
                       ) {
                         navigate(
-                          `/workorders?open=${encodeURIComponent(
+                          `/workorders/${encodeURIComponent(
                             workOrder.id
                           )}`
                         );

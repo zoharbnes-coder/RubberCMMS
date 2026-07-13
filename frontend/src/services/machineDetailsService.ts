@@ -57,32 +57,42 @@ function getDurationMinutes(
     return 0;
   }
 
-  return Math.floor((endTime - startTime) / 60000);
+  return Math.floor(
+    (endTime - startTime) / 60000
+  );
 }
 
-function getDowntimeMinutes(workOrder: WorkOrder): number {
+function getDowntimeMinutes(
+  workOrder: WorkOrder
+): number {
   if (!workOrder.isDowntime) {
     return 0;
   }
 
   return getDurationMinutes(
     workOrder.openedAt,
-    workOrder.closedAt ?? new Date().toISOString()
+    workOrder.closedAt ??
+      new Date().toISOString()
   );
 }
 
-function getRepairMinutes(workOrder: WorkOrder): number {
+function getRepairMinutes(
+  workOrder: WorkOrder
+): number {
   if (!workOrder.takenAt) {
     return 0;
   }
 
   return getDurationMinutes(
     workOrder.takenAt,
-    workOrder.closedAt ?? new Date().toISOString()
+    workOrder.closedAt ??
+      new Date().toISOString()
   );
 }
 
-function getResponseMinutes(workOrder: WorkOrder): number {
+function getResponseMinutes(
+  workOrder: WorkOrder
+): number {
   if (!workOrder.takenAt) {
     return 0;
   }
@@ -93,76 +103,104 @@ function getResponseMinutes(workOrder: WorkOrder): number {
   );
 }
 
-function calculateAverage(values: number[]): number {
-  const validValues = values.filter((value) => value > 0);
+function calculateAverage(
+  values: number[]
+): number {
+  const validValues = values.filter(
+    (value) => value > 0
+  );
 
   if (validValues.length === 0) {
     return 0;
   }
 
-  return (
-    validValues.reduce(
-      (sum, value) => sum + value,
-      0
-    ) / validValues.length
+  const total = validValues.reduce(
+    (sum, value) => sum + value,
+    0
   );
+
+  return total / validValues.length;
 }
 
 function buildWorkOrderSummary(
   workOrders: WorkOrder[]
 ): MachineWorkOrderSummary {
   const openWorkOrders = workOrders.filter(
-    (workOrder) => workOrder.status !== "closed"
+    (workOrder) =>
+      workOrder.status !== "closed"
   );
 
   return {
     totalWorkOrders: workOrders.length,
-    openWorkOrders: openWorkOrders.length,
 
-    pausedWorkOrders: workOrders.filter(
-      (workOrder) => workOrder.status === "paused"
-    ).length,
+    openWorkOrders:
+      openWorkOrders.length,
 
-    closedWorkOrders: workOrders.filter(
-      (workOrder) => workOrder.status === "closed"
-    ).length,
+    pausedWorkOrders:
+      workOrders.filter(
+        (workOrder) =>
+          workOrder.status === "paused"
+      ).length,
 
-    downtimeWorkOrders: workOrders.filter(
-      (workOrder) => workOrder.isDowntime
-    ).length,
+    closedWorkOrders:
+      workOrders.filter(
+        (workOrder) =>
+          workOrder.status === "closed"
+      ).length,
 
-    openDowntimeWorkOrders: openWorkOrders.filter(
-      (workOrder) => workOrder.isDowntime
-    ).length,
+    downtimeWorkOrders:
+      workOrders.filter(
+        (workOrder) =>
+          workOrder.isDowntime
+      ).length,
+
+    openDowntimeWorkOrders:
+      openWorkOrders.filter(
+        (workOrder) =>
+          workOrder.isDowntime
+      ).length,
   };
 }
 
 function buildTimeSummary(
   workOrders: WorkOrder[]
 ): MachineTimeSummary {
-  const totalDowntimeMinutes = workOrders.reduce(
-    (total, workOrder) =>
-      total + getDowntimeMinutes(workOrder),
-    0
-  );
+  const totalDowntimeMinutes =
+    workOrders.reduce(
+      (total, workOrder) =>
+        total +
+        getDowntimeMinutes(workOrder),
+      0
+    );
 
-  const totalRepairMinutes = workOrders.reduce(
-    (total, workOrder) =>
-      total + getRepairMinutes(workOrder),
-    0
-  );
+  const totalRepairMinutes =
+    workOrders.reduce(
+      (total, workOrder) =>
+        total +
+        getRepairMinutes(workOrder),
+      0
+    );
+
+  const responseTimes =
+    workOrders.map(
+      getResponseMinutes
+    );
+
+  const repairTimes =
+    workOrders.map(
+      getRepairMinutes
+    );
 
   return {
     totalDowntimeMinutes,
+
     totalRepairMinutes,
 
-    averageResponseMinutes: calculateAverage(
-      workOrders.map(getResponseMinutes)
-    ),
+    averageResponseMinutes:
+      calculateAverage(responseTimes),
 
-    averageRepairMinutes: calculateAverage(
-      workOrders.map(getRepairMinutes)
-    ),
+    averageRepairMinutes:
+      calculateAverage(repairTimes),
   };
 }
 
@@ -170,38 +208,52 @@ export function getMachineDetailsSnapshot(
   assetNumber: string
 ): MachineDetailsSnapshot | null {
   const machine =
-    getLiveMachineByAssetNumber(assetNumber);
+    getLiveMachineByAssetNumber(
+      assetNumber
+    );
 
   if (!machine) {
     return null;
   }
 
-  const workOrders = getMachineWorkOrders(
-    machine.machineCode
-  );
+  const workOrders =
+    getMachineWorkOrders(
+      machine.machineCode
+    );
 
-  const openWorkOrders = workOrders.filter(
-    (workOrder) => workOrder.status !== "closed"
-  );
+  const openWorkOrders =
+    workOrders.filter(
+      (workOrder) =>
+        workOrder.status !== "closed"
+    );
 
-  const closedWorkOrders = workOrders.filter(
-    (workOrder) => workOrder.status === "closed"
-  );
+  const closedWorkOrders =
+    workOrders.filter(
+      (workOrder) =>
+        workOrder.status === "closed"
+    );
 
   return {
-    generatedAt: new Date().toISOString(),
+    generatedAt:
+      new Date().toISOString(),
 
     machine,
 
     workOrders,
+
     openWorkOrders,
+
     closedWorkOrders,
 
     workOrderSummary:
-      buildWorkOrderSummary(workOrders),
+      buildWorkOrderSummary(
+        workOrders
+      ),
 
     timeSummary:
-      buildTimeSummary(workOrders),
+      buildTimeSummary(
+        workOrders
+      ),
 
     lastWorkOrder:
       workOrders[0] ?? null,

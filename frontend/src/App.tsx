@@ -16,6 +16,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import NewWorkOrder from "./pages/NewWorkOrder";
 import WorkOrders from "./pages/WorkOrders";
+import WorkOrderDetails from "./pages/WorkOrderDetails";
 import Machines from "./pages/Machines";
 import MachineDetails from "./pages/MachineDetails";
 
@@ -49,9 +50,8 @@ function getSavedUser(): AppUser | null {
 }
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(
-    getSavedUser()
-  );
+  const [currentUser, setCurrentUser] =
+    useState<AppUser | null>(getSavedUser());
 
   function handleLogin(user: AppUser) {
     localStorage.setItem(
@@ -113,7 +113,9 @@ export default function App() {
                           currentUserRole={currentUser.role}
                           permission="open_work_order"
                         >
-                          <NewWorkOrder currentUser={currentUser} />
+                          <NewWorkOrder
+                            currentUser={currentUser}
+                          />
                         </ProtectedRoute>
                       }
                     />
@@ -125,7 +127,23 @@ export default function App() {
                           currentUserRole={currentUser.role}
                           permission="view_work_orders"
                         >
-                          <WorkOrders currentUser={currentUser} />
+                          <WorkOrders
+                            currentUser={currentUser}
+                          />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="/workorders/:workOrderId"
+                      element={
+                        <ProtectedRoute
+                          currentUserRole={currentUser.role}
+                          permission="view_work_orders"
+                        >
+                          <WorkOrderDetails
+                            currentUser={currentUser}
+                          />
                         </ProtectedRoute>
                       }
                     />

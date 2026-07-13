@@ -8,14 +8,9 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import WorkOrderDrawer from "../components/workorders/WorkOrderDrawer";
 import type { AppUser } from "../data/users";
 import { getWorkOrders } from "../services/workOrderService";
 import type {
@@ -116,17 +111,16 @@ function getDuration(
 
   const minutes = totalMinutes % 60;
 
-  if (days > 0) {
-    return `${days} ימים ${String(hours).padStart(
-      2,
-      "0"
-    )}:${String(minutes).padStart(2, "0")}`;
-  }
-
-  return `${String(hours).padStart(
+  const time = `${String(hours).padStart(
     2,
     "0"
   )}:${String(minutes).padStart(2, "0")}`;
+
+  if (days > 0) {
+    return `${days} ימים ${time}`;
+  }
+
+  return time;
 }
 
 function sortWorkOrders(
@@ -141,31 +135,36 @@ function sortWorkOrders(
     low: 3,
   };
 
-  return [...workOrders].sort((a, b) => {
-    const aIsOpen = a.status !== "closed";
-    const bIsOpen = b.status !== "closed";
+  return [...workOrders].sort((first, second) => {
+    const firstIsOpen =
+      first.status !== "closed";
 
-    if (aIsOpen !== bIsOpen) {
-      return aIsOpen ? -1 : 1;
-    }
+    const secondIsOpen =
+      second.status !== "closed";
 
-    if (a.isDowntime !== b.isDowntime) {
-      return a.isDowntime ? -1 : 1;
+    if (firstIsOpen !== secondIsOpen) {
+      return firstIsOpen ? -1 : 1;
     }
 
     if (
-      priorityRank[a.priority] !==
-      priorityRank[b.priority]
+      first.isDowntime !== second.isDowntime
+    ) {
+      return first.isDowntime ? -1 : 1;
+    }
+
+    if (
+      priorityRank[first.priority] !==
+      priorityRank[second.priority]
     ) {
       return (
-        priorityRank[a.priority] -
-        priorityRank[b.priority]
+        priorityRank[first.priority] -
+        priorityRank[second.priority]
       );
     }
 
     return (
-      new Date(b.openedAt).getTime() -
-      new Date(a.openedAt).getTime()
+      new Date(second.openedAt).getTime() -
+      new Date(first.openedAt).getTime()
     );
   });
 }
@@ -173,20 +172,11 @@ function sortWorkOrders(
 export default function WorkOrders({
   currentUser,
 }: WorkOrdersProps) {
-  const [searchParams, setSearchParams] =
-    useSearchParams();
+  const navigate = useNavigate();
 
   const [workOrders, setWorkOrders] = useState<
     WorkOrder[]
   >(() => sortWorkOrders(getWorkOrders()));
-
-  const [
-    selectedWorkOrder,
-    setSelectedWorkOrder,
-  ] = useState<WorkOrder | null>(null);
-
-  const [drawerOpen, setDrawerOpen] =
-    useState(false);
 
   const [searchText, setSearchText] =
     useState("");
@@ -205,34 +195,6 @@ export default function WorkOrders({
     setDepartmentFilter,
   ] = useState("all");
 
-  const requestedWorkOrderId =
-    searchParams.get("open");
-
-  useEffect(() => {
-    if (!requestedWorkOrderId) {
-      return;
-    }
-
-    const requestedWorkOrder =
-      workOrders.find(
-        (workOrder) =>
-          workOrder.id === requestedWorkOrderId
-      );
-
-    if (!requestedWorkOrder) {
-      return;
-    }
-
-    setSelectedWorkOrder(
-      requestedWorkOrder
-    );
-
-    setDrawerOpen(true);
-  }, [
-    requestedWorkOrderId,
-    workOrders,
-  ]);
-
   const departments = useMemo(
     () =>
       Array.from(
@@ -246,144 +208,80 @@ export default function WorkOrders({
     [workOrders]
   );
 
-  const filteredWorkOrders =
-    useMemo(() => {
-      const normalizedSearch =
-        searchText
-          .trim()
-          .toLowerCase();
+  const filteredWorkOrders = useMemo(() => {
+    const normalizedSearch =
+      searchText.trim().toLowerCase();
 
-      return workOrders.filter(
-        (workOrder) => {
-          const matchesSearch =
-            !normalizedSearch ||
-            workOrder.workOrderNumber
-              .toLowerCase()
-              .includes(normalizedSearch) ||
-            workOrder.machineCode
-              .toLowerCase()
-              .includes(normalizedSearch) ||
-            workOrder.machineDisplayNumber
-              .toLowerCase()
-              .includes(normalizedSearch) ||
-            workOrder.machineName
-              .toLowerCase()
-              .includes(normalizedSearch) ||
-            workOrder.faultDescription
-              .toLowerCase()
-              .includes(normalizedSearch);
+    return workOrders.filter((workOrder) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        workOrder.workOrderNumber
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        workOrder.machineCode
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        workOrder.machineDisplayNumber
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        workOrder.machineName
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        workOrder.faultDescription
+          .toLowerCase()
+          .includes(normalizedSearch);
 
-          const matchesStatus =
-            statusFilter === "all" ||
-            workOrder.status ===
-              statusFilter;
+      const matchesStatus =
+        statusFilter === "all" ||
+        workOrder.status === statusFilter;
 
-          const matchesPriority =
-            priorityFilter === "all" ||
-            workOrder.priority ===
-              priorityFilter;
+      const matchesPriority =
+        priorityFilter === "all" ||
+        workOrder.priority === priorityFilter;
 
-          const matchesDepartment =
-            departmentFilter === "all" ||
-            workOrder.department ===
-              departmentFilter;
+      const matchesDepartment =
+        departmentFilter === "all" ||
+        workOrder.department ===
+          departmentFilter;
 
-          const matchesDowntime =
-            downtimeFilter === "all" ||
-            (downtimeFilter === "yes" &&
-              workOrder.isDowntime) ||
-            (downtimeFilter === "no" &&
-              !workOrder.isDowntime);
+      const matchesDowntime =
+        downtimeFilter === "all" ||
+        (downtimeFilter === "yes" &&
+          workOrder.isDowntime) ||
+        (downtimeFilter === "no" &&
+          !workOrder.isDowntime);
 
-          return (
-            matchesSearch &&
-            matchesStatus &&
-            matchesPriority &&
-            matchesDepartment &&
-            matchesDowntime
-          );
-        }
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesPriority &&
+        matchesDepartment &&
+        matchesDowntime
       );
-    }, [
-      departmentFilter,
-      downtimeFilter,
-      priorityFilter,
-      searchText,
-      statusFilter,
-      workOrders,
-    ]);
+    });
+  }, [
+    departmentFilter,
+    downtimeFilter,
+    priorityFilter,
+    searchText,
+    statusFilter,
+    workOrders,
+  ]);
 
   function openWorkOrder(
     workOrder: WorkOrder
   ) {
-    setSelectedWorkOrder(workOrder);
-    setDrawerOpen(true);
-
-    setSearchParams(
-      {
-        open: workOrder.id,
-      },
-      {
-        replace: true,
-      }
-    );
-  }
-
-  function closeDrawer() {
-    setDrawerOpen(false);
-    setSelectedWorkOrder(null);
-
-    setSearchParams(
-      {},
-      {
-        replace: true,
-      }
-    );
-  }
-
-  function handleUpdated(
-    updatedWorkOrder: WorkOrder
-  ) {
-    setWorkOrders(
-      (currentWorkOrders) =>
-        sortWorkOrders(
-          currentWorkOrders.map(
-            (workOrder) =>
-              workOrder.id ===
-              updatedWorkOrder.id
-                ? updatedWorkOrder
-                : workOrder
-          )
-        )
-    );
-
-    setSelectedWorkOrder(
-      updatedWorkOrder
+    navigate(
+      `/workorders/${encodeURIComponent(
+        workOrder.id
+      )}`
     );
   }
 
   function refreshWorkOrders() {
-    const refreshedWorkOrders =
-      sortWorkOrders(
-        getWorkOrders()
-      );
-
     setWorkOrders(
-      refreshedWorkOrders
+      sortWorkOrders(getWorkOrders())
     );
-
-    if (selectedWorkOrder) {
-      const refreshedSelected =
-        refreshedWorkOrders.find(
-          (workOrder) =>
-            workOrder.id ===
-            selectedWorkOrder.id
-        ) ?? null;
-
-      setSelectedWorkOrder(
-        refreshedSelected
-      );
-    }
   }
 
   function resetFilters() {
@@ -399,8 +297,7 @@ export default function WorkOrders({
       <Box
         sx={{
           display: "flex",
-          justifyContent:
-            "space-between",
+          justifyContent: "space-between",
           alignItems: {
             xs: "flex-start",
             sm: "center",
@@ -428,27 +325,55 @@ export default function WorkOrders({
           <Typography
             component="p"
             sx={{
-              color:
-                "text.secondary",
+              color: "text.secondary",
             }}
           >
-            צפייה, חיפוש וטיפול
-            בקריאות האחזקה.
+            צפייה, חיפוש וטיפול בקריאות האחזקה.
+          </Typography>
+
+          <Typography
+            component="div"
+            sx={{
+              color: "text.secondary",
+              fontSize: 12,
+              mt: 0.5,
+            }}
+          >
+            משתמש מחובר: {currentUser.fullName}
           </Typography>
         </Box>
 
-        <Button
-          variant="outlined"
-          onClick={
-            refreshWorkOrders
-          }
+        <Box
           sx={{
-            minHeight: 46,
-            fontWeight: 900,
+            display: "flex",
+            gap: 1.5,
+            flexWrap: "wrap",
           }}
         >
-          רענן נתונים
-        </Button>
+          <Button
+            variant="contained"
+            onClick={() =>
+              navigate("/workorders/new")
+            }
+            sx={{
+              minHeight: 46,
+              fontWeight: 900,
+            }}
+          >
+            פתיחת קריאה חדשה
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={refreshWorkOrders}
+            sx={{
+              minHeight: 46,
+              fontWeight: 900,
+            }}
+          >
+            רענן נתונים
+          </Button>
+        </Box>
       </Box>
 
       <Card
@@ -477,9 +402,7 @@ export default function WorkOrders({
               placeholder="מספר דוח, מכונה או תיאור..."
               value={searchText}
               onChange={(event) =>
-                setSearchText(
-                  event.target.value
-                )
+                setSearchText(event.target.value)
               }
             />
 
@@ -570,9 +493,7 @@ export default function WorkOrders({
               select
               fullWidth
               label="מחלקה"
-              value={
-                departmentFilter
-              }
+              value={departmentFilter}
               onChange={(event) =>
                 setDepartmentFilter(
                   event.target.value
@@ -616,9 +537,7 @@ export default function WorkOrders({
           mb: 2,
         }}
       >
-        נמצאו{" "}
-        {filteredWorkOrders.length}{" "}
-        קריאות
+        נמצאו {filteredWorkOrders.length} קריאות
       </Typography>
 
       <Box
@@ -628,8 +547,7 @@ export default function WorkOrders({
           gap: 1.5,
         }}
       >
-        {filteredWorkOrders.length ===
-        0 ? (
+        {filteredWorkOrders.length === 0 ? (
           <Card
             sx={{
               borderRadius: 4,
@@ -639,14 +557,12 @@ export default function WorkOrders({
               <Typography
                 component="p"
                 sx={{
-                  color:
-                    "text.secondary",
+                  color: "text.secondary",
                   textAlign: "center",
                   py: 4,
                 }}
               >
-                לא נמצאו קריאות
-                מתאימות.
+                לא נמצאו קריאות מתאימות.
               </Typography>
             </CardContent>
           </Card>
@@ -661,25 +577,50 @@ export default function WorkOrders({
               return (
                 <Card
                   key={workOrder.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() =>
+                    openWorkOrder(workOrder)
+                  }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" ||
+                      event.key === " "
+                    ) {
+                      openWorkOrder(workOrder);
+                    }
+                  }}
                   sx={{
                     borderRadius: 4,
                     borderRight: `8px solid ${priorityColor}`,
                     boxShadow:
                       "0 5px 18px rgba(15,23,42,0.07)",
+                    cursor: "pointer",
+                    transition:
+                      "transform 0.15s ease, box-shadow 0.15s ease",
+                    "&:hover": {
+                      transform:
+                        "translateY(-2px)",
+                      boxShadow:
+                        "0 10px 24px rgba(15,23,42,0.12)",
+                    },
+                    "&:focus-visible": {
+                      outline:
+                        "3px solid #2563EB",
+                      outlineOffset: "3px",
+                    },
                   }}
                 >
                   <CardContent>
                     <Box
                       sx={{
                         display: "grid",
-                        gridTemplateColumns:
-                          {
-                            xs: "1fr",
-                            md: "1.1fr 1.4fr 1.5fr 1fr 0.8fr auto",
-                          },
+                        gridTemplateColumns: {
+                          xs: "1fr",
+                          md: "1.1fr 1.4fr 1.5fr 1fr 0.8fr auto",
+                        },
                         gap: 2,
-                        alignItems:
-                          "center",
+                        alignItems: "center",
                       }}
                     >
                       <Box>
@@ -719,10 +660,7 @@ export default function WorkOrders({
                           {
                             workOrder.machineDisplayNumber
                           }{" "}
-                          -{" "}
-                          {
-                            workOrder.machineName
-                          }
+                          - {workOrder.machineName}
                         </Typography>
 
                         <Typography
@@ -733,13 +671,15 @@ export default function WorkOrders({
                             fontSize: 13,
                           }}
                         >
-                          {
-                            workOrder.department
-                          }
+                          {workOrder.department}
                         </Typography>
                       </Box>
 
-                      <Box>
+                      <Box
+                        sx={{
+                          minWidth: 0,
+                        }}
+                      >
                         <Typography
                           component="div"
                           sx={{
@@ -755,12 +695,10 @@ export default function WorkOrders({
                           component="div"
                           sx={{
                             fontWeight: 700,
-                            overflow:
-                              "hidden",
+                            overflow: "hidden",
                             textOverflow:
                               "ellipsis",
-                            whiteSpace:
-                              "nowrap",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {
@@ -819,7 +757,7 @@ export default function WorkOrders({
                         >
                           {workOrder.status ===
                           "closed"
-                            ? "זמן השבתה"
+                            ? "זמן כולל"
                             : "זמן פתוח"}
                         </Typography>
 
@@ -844,19 +782,17 @@ export default function WorkOrders({
 
                       <Button
                         variant="contained"
-                        onClick={() =>
-                          openWorkOrder(
-                            workOrder
-                          )
-                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openWorkOrder(workOrder);
+                        }}
                         sx={{
                           minHeight: 44,
                           fontWeight: 900,
-                          whiteSpace:
-                            "nowrap",
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        פתח לטיפול
+                        פרטי קריאה
                       </Button>
                     </Box>
                   </CardContent>
@@ -866,18 +802,6 @@ export default function WorkOrders({
           )
         )}
       </Box>
-
-      <WorkOrderDrawer
-        open={drawerOpen}
-        workOrder={
-          selectedWorkOrder
-        }
-        currentUser={currentUser}
-        onClose={closeDrawer}
-        onUpdated={
-          handleUpdated
-        }
-      />
     </Box>
   );
 }
