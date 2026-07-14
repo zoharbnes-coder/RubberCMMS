@@ -9,9 +9,13 @@ import {
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 
+import MachineIntelligencePanel from "../components/machines/MachineIntelligencePanel";
 import {
   getMachineDetailsSnapshot,
 } from "../services/machineDetailsService";
+import {
+  getMachineIntelligenceSnapshot,
+} from "../services/machineIntelligenceService";
 import type {
   MachineCriticality,
   MachineStatus,
@@ -254,6 +258,11 @@ export default function MachineDetails() {
     lastClosedWorkOrder,
   } = snapshot;
 
+  const intelligence =
+    getMachineIntelligenceSnapshot(
+      machine.assetNumber
+    );
+
   return (
     <Box dir="rtl">
       <Button
@@ -364,6 +373,12 @@ export default function MachineDetails() {
           </Box>
         </CardContent>
       </Card>
+
+      {intelligence && (
+        <MachineIntelligencePanel
+          intelligence={intelligence}
+        />
+      )}
 
       <Box
         sx={{

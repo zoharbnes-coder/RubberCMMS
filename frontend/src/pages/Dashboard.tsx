@@ -16,11 +16,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import KpiCard from "../components/cards/KpiCard";
+import ManagementRiskPanel from "../components/dashboard/ManagementRiskPanel";
+
 import {
   getDashboardSnapshot,
   type DashboardSnapshot,
   type MachineLiveStatus,
 } from "../services/dashboardService";
+
+import {
+  getManagementInsightsSnapshot,
+  type ManagementInsightsSnapshot,
+} from "../services/managementInsightsService";
+
 import { formatMinutes } from "../utils/workOrderMetrics";
 
 function getPriorityLabel(
@@ -94,8 +102,21 @@ export default function Dashboard() {
       getDashboardSnapshot()
     );
 
+  const [
+    managementSnapshot,
+    setManagementSnapshot,
+  ] = useState<ManagementInsightsSnapshot>(
+    getManagementInsightsSnapshot()
+  );
+
   function refreshDashboard() {
-    setSnapshot(getDashboardSnapshot());
+    setSnapshot(
+      getDashboardSnapshot()
+    );
+
+    setManagementSnapshot(
+      getManagementInsightsSnapshot()
+    );
   }
 
   function openWorkOrder(
@@ -262,8 +283,8 @@ export default function Dashboard() {
               color: "text.secondary",
             }}
           >
-            תמונת מצב אחזקה חיה על
-            בסיס קריאות המערכת
+            תמונת מצב אחזקה חיה ותובנות
+            ניהוליות על בסיס נתוני המערכת
           </Typography>
 
           <Typography
@@ -313,6 +334,10 @@ export default function Dashboard() {
           />
         ))}
       </Box>
+
+      <ManagementRiskPanel
+        snapshot={managementSnapshot}
+      />
 
       <Box
         sx={{
