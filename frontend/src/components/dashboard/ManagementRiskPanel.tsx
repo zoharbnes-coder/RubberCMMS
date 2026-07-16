@@ -22,18 +22,18 @@ function getRiskLabel(
   riskLevel: MachineRiskLevel
 ): string {
   if (riskLevel === "critical") {
-    return "קריטית";
+    return "קריטי";
   }
 
   if (riskLevel === "high") {
-    return "גבוהה";
+    return "גבוה";
   }
 
   if (riskLevel === "medium") {
-    return "בינונית";
+    return "בינוני";
   }
 
-  return "נמוכה";
+  return "נמוך";
 }
 
 function getRiskColor(
@@ -72,7 +72,7 @@ function getHealthColor(
   return "#16A34A";
 }
 
-function RiskSummaryCard({
+function RiskCounter({
   label,
   value,
   color,
@@ -84,30 +84,56 @@ function RiskSummaryCard({
   return (
     <Box
       sx={{
-        p: 2,
-        borderRadius: 4,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 1,
+        minWidth: 0,
+        px: 1.5,
+        py: 1,
+        borderRadius: 2.5,
         bgcolor: "#F8FAFC",
         border: "1px solid #E2E8F0",
-        borderTop: `5px solid ${color}`,
       }}
     >
-      <Typography
-        component="div"
+      <Box
         sx={{
-          color: "text.secondary",
-          fontSize: 13,
-          mb: 0.5,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          minWidth: 0,
         }}
       >
-        {label}
-      </Typography>
+        <Box
+          sx={{
+            width: 9,
+            height: 9,
+            borderRadius: "50%",
+            bgcolor: color,
+            flexShrink: 0,
+          }}
+        />
+
+        <Typography
+          component="div"
+          sx={{
+            color: "text.secondary",
+            fontWeight: 800,
+            fontSize: 12,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {label}
+        </Typography>
+      </Box>
 
       <Typography
         component="div"
         sx={{
           fontWeight: 900,
-          fontSize: 28,
+          fontSize: 18,
           color,
+          lineHeight: 1,
         }}
       >
         {value}
@@ -145,192 +171,230 @@ function RiskMachineRow({
         }
       }}
       sx={{
-        p: 2,
-        borderRadius: 4,
-        bgcolor: "#F8FAFC",
+        display: "grid",
+        gridTemplateColumns: {
+          xs: "1fr",
+          md: "1.25fr 0.75fr 0.7fr 1.8fr auto",
+        },
+        gap: {
+          xs: 1.25,
+          md: 1.75,
+        },
+        alignItems: "center",
+        px: {
+          xs: 1.5,
+          md: 2,
+        },
+        py: {
+          xs: 1.5,
+          md: 1.35,
+        },
+        borderRadius: 3,
+        bgcolor: "#FFFFFF",
         border: "1px solid #E2E8F0",
-        borderRight: `7px solid ${riskColor}`,
+        borderRight: `6px solid ${riskColor}`,
         cursor: "pointer",
         transition:
-          "transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease",
+          "background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease",
         "&:hover": {
-          bgcolor: "#EEF2F7",
-          transform: "translateY(-2px)",
+          bgcolor: "#F8FAFC",
           boxShadow:
-            "0 8px 20px rgba(15,23,42,0.10)",
+            "0 6px 18px rgba(15,23,42,0.08)",
+          transform: "translateY(-1px)",
         },
         "&:focus-visible": {
           outline: "3px solid #2563EB",
-          outlineOffset: "3px",
+          outlineOffset: 2,
         },
       }}
     >
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            md: "1.4fr 0.8fr 0.8fr 2fr",
-          },
-          gap: 2,
-          alignItems: "center",
-        }}
-      >
-        <Box>
-          <Typography
-            component="div"
-            sx={{
-              fontWeight: 900,
-              fontSize: 16,
-            }}
-          >
-            {machine.assetNumber} -{" "}
-            {machine.machineName}
-          </Typography>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          component="div"
+          sx={{
+            fontWeight: 900,
+            fontSize: 14,
+            lineHeight: 1.25,
+            mb: 0.35,
+          }}
+        >
+          {machine.assetNumber} -{" "}
+          {machine.machineName}
+        </Typography>
 
-          <Typography
-            component="div"
-            sx={{
-              color: "text.secondary",
-              fontSize: 13,
-            }}
-          >
-            {machine.department}
-          </Typography>
-        </Box>
+        <Typography
+          component="div"
+          sx={{
+            color: "text.secondary",
+            fontSize: 11.5,
+          }}
+        >
+          {machine.department}
+        </Typography>
+      </Box>
 
-        <Box>
-          <Typography
-            component="div"
-            sx={{
-              color: "text.secondary",
-              fontSize: 12,
-              mb: 0.5,
-            }}
-          >
-            Health Score
-          </Typography>
-
-          <Typography
-            component="div"
-            sx={{
-              fontWeight: 900,
-              fontSize: 20,
-              color: healthColor,
-            }}
-          >
-            {machine.healthScore}/100
-          </Typography>
-
-          <LinearProgress
-            variant="determinate"
-            value={machine.healthScore}
-            sx={{
-              mt: 0.75,
-              height: 7,
-              borderRadius: 10,
-              bgcolor: "#E2E8F0",
-              "& .MuiLinearProgress-bar": {
-                bgcolor: healthColor,
-                borderRadius: 10,
-              },
-            }}
-          />
-        </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          component="div"
+          sx={{
+            color: "text.secondary",
+            fontSize: 10.5,
+            mb: 0.35,
+          }}
+        >
+          Health Score
+        </Typography>
 
         <Box
           sx={{
             display: "flex",
-            flexDirection: "column",
-            gap: 0.75,
-            alignItems: {
-              xs: "flex-start",
-              md: "center",
-            },
+            alignItems: "baseline",
+            gap: 0.4,
+            mb: 0.65,
           }}
         >
-          <Chip
-            label={`סיכון ${getRiskLabel(
-              machine.riskLevel
-            )}`}
-            size="small"
+          <Typography
+            component="div"
             sx={{
-              bgcolor: riskColor,
-              color: "white",
               fontWeight: 900,
-            }}
-          />
-
-          <Typography
-            component="div"
-            sx={{
-              color: "text.secondary",
-              fontSize: 12,
+              fontSize: 19,
+              color: healthColor,
+              lineHeight: 1,
             }}
           >
-            פתוחות: {machine.openWorkOrders}
+            {machine.healthScore}
           </Typography>
 
           <Typography
-            component="div"
+            component="span"
             sx={{
-              color:
-                machine.downtimeWorkOrders > 0
-                  ? "#DC2626"
-                  : "text.secondary",
-              fontSize: 12,
-              fontWeight:
-                machine.downtimeWorkOrders > 0
-                  ? 900
-                  : 400,
+              color: "text.secondary",
+              fontSize: 10.5,
             }}
           >
-            משביתות:{" "}
-            {machine.downtimeWorkOrders}
+            /100
           </Typography>
         </Box>
 
-        <Box>
-          <Typography
-            component="div"
-            sx={{
-              color: "text.secondary",
-              fontSize: 12,
-              mb: 0.5,
-            }}
-          >
-            המלצה ראשית
-          </Typography>
-
-          <Typography
-            component="div"
-            sx={{
-              fontWeight: 700,
-              lineHeight: 1.6,
-            }}
-          >
-            {machine.primaryRecommendation}
-          </Typography>
-
-          <Typography
-            component="div"
-            sx={{
-              color: "text.secondary",
-              fontSize: 12,
-              mt: 1,
-            }}
-          >
-            7 ימים:{" "}
-            {machine.failuresLast7Days} תקלות ·
-            30 ימים:{" "}
-            {machine.failuresLast30Days} ·
-            משביתות:{" "}
-            {
-              machine.downtimeFailuresLast30Days
-            }
-          </Typography>
-        </Box>
+        <LinearProgress
+          variant="determinate"
+          value={machine.healthScore}
+          sx={{
+            height: 6,
+            "& .MuiLinearProgress-bar": {
+              bgcolor: healthColor,
+            },
+          }}
+        />
       </Box>
+
+      <Box
+        sx={{
+          display: "grid",
+          justifyItems: {
+            xs: "start",
+            md: "center",
+          },
+          gap: 0.5,
+        }}
+      >
+        <Chip
+          label={`סיכון ${getRiskLabel(
+            machine.riskLevel
+          )}`}
+          size="small"
+          sx={{
+            bgcolor: riskColor,
+            color: "white",
+            fontWeight: 900,
+          }}
+        />
+
+        <Typography
+          component="div"
+          sx={{
+            color: "text.secondary",
+            fontSize: 10.5,
+          }}
+        >
+          פתוחות: {machine.openWorkOrders}
+        </Typography>
+
+        <Typography
+          component="div"
+          sx={{
+            color:
+              machine.downtimeWorkOrders > 0
+                ? "#DC2626"
+                : "text.secondary",
+            fontSize: 10.5,
+            fontWeight:
+              machine.downtimeWorkOrders > 0
+                ? 900
+                : 500,
+          }}
+        >
+          משביתות:{" "}
+          {machine.downtimeWorkOrders}
+        </Typography>
+      </Box>
+
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          component="div"
+          sx={{
+            color: "text.secondary",
+            fontSize: 10.5,
+            mb: 0.35,
+          }}
+        >
+          פעולה מומלצת
+        </Typography>
+
+        <Typography
+          component="div"
+          sx={{
+            fontWeight: 800,
+            fontSize: 12.5,
+            lineHeight: 1.45,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {machine.primaryRecommendation}
+        </Typography>
+
+        <Typography
+          component="div"
+          sx={{
+            color: "text.secondary",
+            fontSize: 10.5,
+            mt: 0.5,
+          }}
+        >
+          7 ימים:{" "}
+          {machine.failuresLast7Days} · 30 ימים:{" "}
+          {machine.failuresLast30Days} · השבתות:{" "}
+          {
+            machine.downtimeFailuresLast30Days
+          }
+        </Typography>
+      </Box>
+
+      <Typography
+        component="div"
+        sx={{
+          fontWeight: 900,
+          fontSize: 20,
+          color: "#64748B",
+          transform: "rotate(180deg)",
+          justifySelf: {
+            xs: "start",
+            md: "end",
+          },
+        }}
+      >
+        ‹
+      </Typography>
     </Box>
   );
 }
@@ -344,19 +408,21 @@ export default function ManagementRiskPanel({
     snapshot.averageHealthScore
   );
 
+  const attentionColor =
+    snapshot.machinesRequiringAttention > 0
+      ? "#DC2626"
+      : "#16A34A";
+
   return (
     <Card
       sx={{
-        borderRadius: 5,
-        mb: 3,
+        mb: 2,
         overflow: "hidden",
-        boxShadow:
-          "0 10px 30px rgba(15,23,42,0.10)",
       }}
     >
       <Box
         sx={{
-          height: 7,
+          height: 5,
           bgcolor: healthColor,
         }}
       />
@@ -364,8 +430,14 @@ export default function ManagementRiskPanel({
       <CardContent
         sx={{
           p: {
-            xs: 2,
-            md: 3,
+            xs: 1.5,
+            md: 2,
+          },
+          "&:last-child": {
+            pb: {
+              xs: 1.5,
+              md: 2,
+            },
           },
         }}
       >
@@ -381,44 +453,41 @@ export default function ManagementRiskPanel({
               xs: "column",
               md: "row",
             },
-            gap: 2,
-            mb: 3,
+            gap: 1.25,
+            mb: 1.5,
           }}
         >
           <Box>
             <Typography
               component="h2"
-              variant="h5"
               sx={{
                 fontWeight: 900,
-                mb: 0.5,
+                fontSize: 18,
+                mb: 0.25,
               }}
             >
-              תמונת סיכון הנהלתית
+              מצב המפעל
             </Typography>
 
             <Typography
-              component="p"
+              component="div"
               sx={{
                 color: "text.secondary",
+                fontSize: 11.5,
               }}
             >
-              דירוג מצב המכונות והנושאים
-              הדורשים תשומת לב ניהולית.
+              בריאות המכונות והנושאים הדורשים
+              פעולה עכשיו
             </Typography>
           </Box>
 
           <Chip
             label={`${snapshot.machinesRequiringAttention} מכונות דורשות תשומת לב`}
+            size="small"
             sx={{
-              bgcolor:
-                snapshot.machinesRequiringAttention >
-                0
-                  ? "#DC2626"
-                  : "#16A34A",
+              bgcolor: attentionColor,
               color: "white",
               fontWeight: 900,
-              minHeight: 36,
             }}
           />
         </Box>
@@ -428,16 +497,19 @@ export default function ManagementRiskPanel({
             display: "grid",
             gridTemplateColumns: {
               xs: "1fr",
-              lg: "300px minmax(0, 1fr)",
+              lg: "280px minmax(0, 1fr)",
             },
-            gap: 3,
-            mb: 3,
+            gap: 1.5,
+            mb: 1.75,
           }}
         >
           <Box
             sx={{
-              p: 3,
-              borderRadius: 4,
+              display: "grid",
+              alignContent: "center",
+              px: 2,
+              py: 1.5,
+              borderRadius: 3,
               bgcolor: "#F8FAFC",
               border: "1px solid #E2E8F0",
             }}
@@ -446,48 +518,54 @@ export default function ManagementRiskPanel({
               component="div"
               sx={{
                 color: "text.secondary",
-                fontSize: 13,
+                fontSize: 11.5,
+                mb: 0.4,
+              }}
+            >
+              Plant Health
+            </Typography>
+
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 0.5,
                 mb: 1,
               }}
             >
-              Health Score מפעלי ממוצע
-            </Typography>
+              <Typography
+                component="div"
+                sx={{
+                  fontWeight: 900,
+                  fontSize: 38,
+                  lineHeight: 1,
+                  color: healthColor,
+                }}
+              >
+                {snapshot.averageHealthScore.toFixed(
+                  1
+                )}
+              </Typography>
 
-            <Typography
-              component="div"
-              sx={{
-                fontWeight: 900,
-                fontSize: 46,
-                lineHeight: 1,
-                color: healthColor,
-                mb: 2,
-              }}
-            >
-              {snapshot.averageHealthScore.toFixed(
-                1
-              )}
-              <Box
+              <Typography
                 component="span"
                 sx={{
-                  fontSize: 18,
                   color: "text.secondary",
-                  mr: 0.5,
+                  fontSize: 13,
+                  fontWeight: 700,
                 }}
               >
                 /100
-              </Box>
-            </Typography>
+              </Typography>
+            </Box>
 
             <LinearProgress
               variant="determinate"
               value={snapshot.averageHealthScore}
               sx={{
-                height: 11,
-                borderRadius: 10,
-                bgcolor: "#E2E8F0",
+                height: 8,
                 "& .MuiLinearProgress-bar": {
                   bgcolor: healthColor,
-                  borderRadius: 10,
                 },
               }}
             />
@@ -496,8 +574,8 @@ export default function ManagementRiskPanel({
               component="div"
               sx={{
                 color: "text.secondary",
-                fontSize: 12,
-                mt: 1.5,
+                fontSize: 10.5,
+                mt: 0.75,
               }}
             >
               מתוך {snapshot.totalMachines} מכונות
@@ -510,18 +588,19 @@ export default function ManagementRiskPanel({
               display: "grid",
               gridTemplateColumns: {
                 xs: "repeat(2, minmax(0, 1fr))",
-                md: "repeat(4, minmax(0, 1fr))",
+                sm: "repeat(4, minmax(0, 1fr))",
               },
-              gap: 2,
+              gap: 1,
+              alignContent: "center",
             }}
           >
-            <RiskSummaryCard
+            <RiskCounter
               label="סיכון נמוך"
               value={snapshot.lowRiskMachines}
               color="#16A34A"
             />
 
-            <RiskSummaryCard
+            <RiskCounter
               label="סיכון בינוני"
               value={
                 snapshot.mediumRiskMachines
@@ -529,13 +608,13 @@ export default function ManagementRiskPanel({
               color="#F59E0B"
             />
 
-            <RiskSummaryCard
+            <RiskCounter
               label="סיכון גבוה"
               value={snapshot.highRiskMachines}
               color="#DC2626"
             />
 
-            <RiskSummaryCard
+            <RiskCounter
               label="סיכון קריטי"
               value={
                 snapshot.criticalRiskMachines
@@ -545,23 +624,43 @@ export default function ManagementRiskPanel({
           </Box>
         </Box>
 
-        <Typography
-          component="h3"
-          variant="h6"
+        <Box
           sx={{
-            fontWeight: 900,
-            mb: 1.5,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 1,
+            mb: 1,
           }}
         >
-          מכונות בעדיפות ניהולית
-        </Typography>
+          <Typography
+            component="h3"
+            sx={{
+              fontWeight: 900,
+              fontSize: 15,
+            }}
+          >
+            דורש טיפול עכשיו
+          </Typography>
+
+          <Typography
+            component="div"
+            sx={{
+              color: "text.secondary",
+              fontSize: 10.5,
+            }}
+          >
+            ממויין לפי רמת סיכון
+          </Typography>
+        </Box>
 
         {snapshot.topRiskMachines.length ===
         0 ? (
           <Box
             sx={{
-              p: 3,
-              borderRadius: 4,
+              px: 2,
+              py: 1.5,
+              borderRadius: 3,
               bgcolor: "#F0FDF4",
               border: "1px solid #BBF7D0",
             }}
@@ -571,7 +670,8 @@ export default function ManagementRiskPanel({
               sx={{
                 fontWeight: 900,
                 color: "#166534",
-                mb: 0.5,
+                fontSize: 13,
+                mb: 0.25,
               }}
             >
               אין כרגע מכונות בסיכון מהותי
@@ -581,17 +681,18 @@ export default function ManagementRiskPanel({
               component="div"
               sx={{
                 color: "#166534",
+                fontSize: 11.5,
               }}
             >
-              כל המכונות נמצאות כרגע ברמת
-              סיכון נמוכה.
+              כל המכונות נמצאות כרגע ברמת סיכון
+              נמוכה.
             </Typography>
           </Box>
         ) : (
           <Box
             sx={{
               display: "grid",
-              gap: 1.5,
+              gap: 1,
             }}
           >
             {snapshot.topRiskMachines.map(
