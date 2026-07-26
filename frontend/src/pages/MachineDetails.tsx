@@ -3,6 +3,7 @@ import {
   Button,
   Typography,
 } from "@mui/material";
+
 import {
   useNavigate,
   useParams,
@@ -16,20 +17,24 @@ import MachineTimeline from "../components/machines/MachineTimeline";
 import MachineWorkOrdersPanel from "../components/machines/MachineWorkOrdersPanel";
 
 import {
+  assetToMachine,
+} from "../types/machine";
+
+import {
   getMieAssetSnapshot,
 } from "../engine/mie/mieService";
 
 import {
-  getMachineDetailsSnapshot,
-} from "../services/machineDetailsService";
+  getAssetDetailsSnapshot,
+} from "../services/assetDetailsService";
 
 import {
   getMachineMaintenanceSummary,
 } from "../services/preventiveMaintenanceService";
 
 import {
-  getMachineTimelineSnapshot,
-} from "../services/machineTimelineService";
+  getAssetTimelineSnapshot,
+} from "../services/assetTimelineService";
 
 export default function MachineDetails() {
   const {
@@ -38,23 +43,32 @@ export default function MachineDetails() {
     machineCode: string;
   }>();
 
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
   const assetNumber =
     routeAssetNumber
       ? decodeURIComponent(
-          routeAssetNumber
+          routeAssetNumber,
         )
       : "";
 
-  const machineSnapshot =
+  /*
+   * The route still uses the historical
+   * "machineCode" parameter name for
+   * compatibility with the existing UI.
+   *
+   * Internally, the value represents
+   * the assetNumber.
+   */
+  const assetSnapshot =
     assetNumber
-      ? getMachineDetailsSnapshot(
-          assetNumber
+      ? getAssetDetailsSnapshot(
+          assetNumber,
         )
       : null;
 
-  if (!machineSnapshot) {
+  if (!assetSnapshot) {
     return (
       <Box dir="rtl">
         <Typography
@@ -62,6 +76,7 @@ export default function MachineDetails() {
           variant="h4"
           sx={{
             fontWeight: 900,
+
             mb: 1,
           }}
         >
@@ -71,7 +86,9 @@ export default function MachineDetails() {
         <Typography
           component="p"
           sx={{
-            color: "text.secondary",
+            color:
+              "text.secondary",
+
             mb: 2,
           }}
         >
@@ -82,7 +99,9 @@ export default function MachineDetails() {
         <Button
           variant="contained"
           onClick={() =>
-            navigate("/machines")
+            navigate(
+              "/machines",
+            )
           }
           sx={{
             fontWeight: 900,
@@ -95,27 +114,41 @@ export default function MachineDetails() {
   }
 
   const {
-    machine,
+    asset,
+
     openWorkOrders,
+
     closedWorkOrders,
+
     workOrderSummary,
+
     timeSummary,
-  } = machineSnapshot;
+  } = assetSnapshot;
+
+  /*
+   * Existing UI components still expect
+   * Machine.
+   *
+   * Asset is now the source of truth.
+   * This adapter keeps the current UI
+   * fully compatible during migration.
+   */
+  const machine =
+    assetToMachine(asset);
 
   const maintenanceSummary =
     getMachineMaintenanceSummary(
-      machine.assetNumber
+      asset.assetNumber,
     );
 
   const timelineSnapshot =
-    getMachineTimelineSnapshot(
-      machine.assetNumber,
-      machine.machineCode
+    getAssetTimelineSnapshot(
+      asset.assetNumber,
     );
 
   const mieSnapshot =
     getMieAssetSnapshot(
-      machine.assetNumber
+      asset.assetNumber,
     );
 
   return (
@@ -123,18 +156,24 @@ export default function MachineDetails() {
       <MachineHeader
         machine={machine}
         onBack={() =>
-          navigate("/machines")
+          navigate(
+            "/machines",
+          )
         }
       />
 
       {mieSnapshot && (
         <MachineMiePanel
-          snapshot={mieSnapshot}
+          snapshot={
+            mieSnapshot
+          }
         />
       )}
 
       <MachineMaintenancePanel
-        summary={maintenanceSummary}
+        summary={
+          maintenanceSummary
+        }
       />
 
       <MachineKpiPanel
@@ -142,7 +181,9 @@ export default function MachineDetails() {
         workOrderSummary={
           workOrderSummary
         }
-        timeSummary={timeSummary}
+        timeSummary={
+          timeSummary
+        }
       />
 
       <MachineWorkOrdersPanel
@@ -154,9 +195,13 @@ export default function MachineDetails() {
         }
       />
 
-      <MachineTimeline
-        snapshot={timelineSnapshot}
-      />
+      {timelineSnapshot && (
+        <MachineTimeline
+          snapshot={
+            timelineSnapshot
+          }
+        />
+      )}
     </Box>
   );
 }

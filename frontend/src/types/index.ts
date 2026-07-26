@@ -7,6 +7,11 @@
  */
 
 /*
+ * Shared Repository Contracts
+ */
+export * from "./repository";
+
+/*
  * Foundation Layer
  */
 export * from "./plant";

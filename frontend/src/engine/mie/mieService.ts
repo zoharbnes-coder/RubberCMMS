@@ -9,38 +9,69 @@ import {
 import type {
   MieEngineSnapshot,
   MieRecommendation,
+  MieRiskLevel,
   MieRuleResult,
 } from "./types";
 
 export type MieAssetSnapshot = {
   generatedAt: string;
 
+  /*
+   * Asset identity
+   */
+  assetId: string;
+
   assetNumber: string;
+
+  assetCode: string;
+
+  /*
+   * Legacy compatibility
+   *
+   * Kept temporarily while older
+   * machine components still use
+   * machineCode.
+   */
   machineCode: string;
 
+  /*
+   * Health
+   */
   healthScore: number;
+
   baseHealthScore: number;
 
   riskLevel:
-    | "low"
-    | "medium"
-    | "high"
-    | "critical";
+    MieRiskLevel;
 
-  triggeredRules: MieRuleResult[];
-  passedRules: MieRuleResult[];
+  /*
+   * Rule results
+   */
+  triggeredRules:
+    MieRuleResult[];
 
+  passedRules:
+    MieRuleResult[];
+
+  /*
+   * Recommendations
+   */
   recommendations:
     MieRecommendation[];
 
   urgentRecommendations:
     MieRecommendation[];
 
-  engine: MieEngineSnapshot;
+  /*
+   * Full engine snapshot
+   */
+  engine:
+    MieEngineSnapshot;
 };
 
 function sortTriggeredRules(
-  results: MieRuleResult[]
+  results:
+    MieRuleResult[],
 ): MieRuleResult[] {
   const severityRank = {
     positive: 0,
@@ -50,8 +81,13 @@ function sortTriggeredRules(
     critical: 4,
   };
 
-  return [...results].sort(
-    (first, second) => {
+  return [
+    ...results,
+  ].sort(
+    (
+      first,
+      second,
+    ) => {
       const severityDifference =
         severityRank[
           second.severity
@@ -60,7 +96,10 @@ function sortTriggeredRules(
           first.severity
         ];
 
-      if (severityDifference !== 0) {
+      if (
+        severityDifference !==
+        0
+      ) {
         return severityDifference;
       }
 
@@ -76,19 +115,19 @@ function sortTriggeredRules(
 
       return (
         new Date(
-          second.evaluatedAt
+          second.evaluatedAt,
         ).getTime() -
         new Date(
-          first.evaluatedAt
+          first.evaluatedAt,
         ).getTime()
       );
-    }
+    },
   );
 }
 
 function sortRecommendations(
   recommendations:
-    MieRecommendation[]
+    MieRecommendation[],
 ): MieRecommendation[] {
   const priorityRank = {
     low: 1,
@@ -97,8 +136,13 @@ function sortRecommendations(
     urgent: 4,
   };
 
-  return [...recommendations].sort(
-    (first, second) => {
+  return [
+    ...recommendations,
+  ].sort(
+    (
+      first,
+      second,
+    ) => {
       const priorityDifference =
         priorityRank[
           second.priority
@@ -107,7 +151,10 @@ function sortRecommendations(
           first.priority
         ];
 
-      if (priorityDifference !== 0) {
+      if (
+        priorityDifference !==
+        0
+      ) {
         return priorityDifference;
       }
 
@@ -123,22 +170,22 @@ function sortRecommendations(
 
       return (
         new Date(
-          second.createdAt
+          second.createdAt,
         ).getTime() -
         new Date(
-          first.createdAt
+          first.createdAt,
         ).getTime()
       );
-    }
+    },
   );
 }
 
 export function getMieAssetSnapshot(
-  assetNumber: string
+  assetNumber: string,
 ): MieAssetSnapshot | null {
   const context =
     buildMieRuleContext(
-      assetNumber
+      assetNumber,
     );
 
   if (!context) {
@@ -147,7 +194,7 @@ export function getMieAssetSnapshot(
 
   const engine =
     runMieRuleEngine(
-      context
+      context,
     );
 
   const triggeredRules =
@@ -155,39 +202,54 @@ export function getMieAssetSnapshot(
       engine.results.filter(
         (result) =>
           result.status ===
-          "triggered"
-      )
+          "triggered",
+      ),
     );
 
   const passedRules =
     engine.results.filter(
       (result) =>
         result.status ===
-        "passed"
+        "passed",
     );
 
   const recommendations =
     sortRecommendations(
-      engine.recommendations
+      engine.recommendations,
     );
 
   const urgentRecommendations =
     recommendations.filter(
       (recommendation) =>
         recommendation.priority ===
-        "urgent"
+        "urgent",
     );
 
   return {
     generatedAt:
       new Date().toISOString(),
 
+    /*
+     * Asset identity
+     */
+    assetId:
+      engine.assetId,
+
     assetNumber:
       engine.assetNumber,
 
+    assetCode:
+      engine.assetCode,
+
+    /*
+     * Legacy compatibility
+     */
     machineCode:
       engine.machineCode,
 
+    /*
+     * Health
+     */
     healthScore:
       engine.calculatedHealthScore,
 
@@ -210,11 +272,11 @@ export function getMieAssetSnapshot(
 }
 
 export function getMieHealthScore(
-  assetNumber: string
+  assetNumber: string,
 ): number | null {
   const snapshot =
     getMieAssetSnapshot(
-      assetNumber
+      assetNumber,
     );
 
   return (
@@ -224,21 +286,23 @@ export function getMieHealthScore(
 }
 
 export function getMieRecommendations(
-  assetNumber: string
+  assetNumber: string,
 ): MieRecommendation[] {
   return (
     getMieAssetSnapshot(
-      assetNumber
-    )?.recommendations ?? []
+      assetNumber,
+    )?.recommendations ??
+    []
   );
 }
 
 export function getMieTriggeredRules(
-  assetNumber: string
+  assetNumber: string,
 ): MieRuleResult[] {
   return (
     getMieAssetSnapshot(
-      assetNumber
-    )?.triggeredRules ?? []
+      assetNumber,
+    )?.triggeredRules ??
+    []
   );
 }

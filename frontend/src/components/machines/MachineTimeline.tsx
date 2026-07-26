@@ -6,19 +6,28 @@ import {
   Chip,
   Typography,
 } from "@mui/material";
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useMemo,
+  useState,
+} from "react";
+import {
+  useNavigate,
+} from "react-router-dom";
 
 import type {
-  MachineTimelineEvent,
-  MachineTimelineEventSeverity,
-  MachineTimelineEventType,
-  MachineTimelineSnapshot,
-} from "../../services/machineTimelineService";
-import { formatMinutes } from "../../utils/workOrderMetrics";
+  AssetTimelineEvent,
+  AssetTimelineEventSeverity,
+  AssetTimelineEventType,
+  AssetTimelineSnapshot,
+} from "../../services/assetTimelineService";
+
+import {
+  formatMinutes,
+} from "../../utils/workOrderMetrics";
 
 type MachineTimelineProps = {
-  snapshot: MachineTimelineSnapshot;
+  snapshot:
+    AssetTimelineSnapshot;
 };
 
 type TimelineFilter =
@@ -31,25 +40,37 @@ type TimelineFilter =
   | "work_order";
 
 function getEventTypeLabel(
-  eventType: MachineTimelineEventType
+  eventType:
+    AssetTimelineEventType,
 ): string {
-  if (eventType === "breakdown") {
+  if (
+    eventType === "breakdown"
+  ) {
     return "תקלה משביתה";
   }
 
-  if (eventType === "preventive_maintenance") {
+  if (
+    eventType ===
+    "preventive_maintenance"
+  ) {
     return "טיפול מונע";
   }
 
-  if (eventType === "inspection") {
+  if (
+    eventType === "inspection"
+  ) {
     return "בדיקה";
   }
 
-  if (eventType === "safety") {
+  if (
+    eventType === "safety"
+  ) {
     return "בטיחות";
   }
 
-  if (eventType === "improvement") {
+  if (
+    eventType === "improvement"
+  ) {
     return "שיפור";
   }
 
@@ -57,21 +78,30 @@ function getEventTypeLabel(
 }
 
 function getSeverityColor(
-  severity: MachineTimelineEventSeverity
+  severity:
+    AssetTimelineEventSeverity,
 ): string {
-  if (severity === "danger") {
+  if (
+    severity === "danger"
+  ) {
     return "#DC2626";
   }
 
-  if (severity === "warning") {
+  if (
+    severity === "warning"
+  ) {
     return "#D97706";
   }
 
-  if (severity === "success") {
+  if (
+    severity === "success"
+  ) {
     return "#16A34A";
   }
 
-  if (severity === "info") {
+  if (
+    severity === "info"
+  ) {
     return "#2563EB";
   }
 
@@ -79,21 +109,30 @@ function getSeverityColor(
 }
 
 function getEventBackground(
-  severity: MachineTimelineEventSeverity
+  severity:
+    AssetTimelineEventSeverity,
 ): string {
-  if (severity === "danger") {
+  if (
+    severity === "danger"
+  ) {
     return "#FEF2F2";
   }
 
-  if (severity === "warning") {
+  if (
+    severity === "warning"
+  ) {
     return "#FFFBEB";
   }
 
-  if (severity === "success") {
+  if (
+    severity === "success"
+  ) {
     return "#F0FDF4";
   }
 
-  if (severity === "info") {
+  if (
+    severity === "info"
+  ) {
     return "#EFF6FF";
   }
 
@@ -101,49 +140,76 @@ function getEventBackground(
 }
 
 function getEventBorder(
-  severity: MachineTimelineEventSeverity
+  severity:
+    AssetTimelineEventSeverity,
 ): string {
-  if (severity === "danger") {
+  if (
+    severity === "danger"
+  ) {
     return "#FECACA";
   }
 
-  if (severity === "warning") {
+  if (
+    severity === "warning"
+  ) {
     return "#FDE68A";
   }
 
-  if (severity === "success") {
+  if (
+    severity === "success"
+  ) {
     return "#BBF7D0";
   }
 
-  if (severity === "info") {
+  if (
+    severity === "info"
+  ) {
     return "#BFDBFE";
   }
 
   return "#E2E8F0";
 }
 
-function formatDate(value: string): string {
-  const date = new Date(value);
+function formatDate(
+  value: string,
+): string {
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return "-";
   }
 
-  return new Intl.DateTimeFormat("he-IL", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    "he-IL",
+    {
+      dateStyle: "short",
+      timeStyle: "short",
+    },
+  ).format(date);
 }
 
 function openEvent(
-  event: MachineTimelineEvent,
-  navigate: ReturnType<typeof useNavigate>
+  event:
+    AssetTimelineEvent,
+
+  navigate:
+    ReturnType<
+      typeof useNavigate
+    >,
 ) {
-  if (event.sourceType === "work_order") {
+  if (
+    event.sourceType ===
+    "work_order"
+  ) {
     navigate(
       `/workorders/${encodeURIComponent(
-        event.sourceId
-      )}`
+        event.sourceId,
+      )}`,
     );
 
     return;
@@ -151,10 +217,10 @@ function openEvent(
 
   navigate(
     `/maintenance?asset=${encodeURIComponent(
-      event.assetNumber
+      event.assetNumber,
     )}&execution=${encodeURIComponent(
-      event.sourceId
-    )}`
+      event.sourceId,
+    )}`,
   );
 }
 
@@ -163,45 +229,71 @@ function TimelineEventRow({
   isLast,
   onOpen,
 }: {
-  event: MachineTimelineEvent;
+  event:
+    AssetTimelineEvent;
+
   isLast: boolean;
+
   onOpen: () => void;
 }) {
-  const severityColor = getSeverityColor(
-    event.severity
-  );
+  const severityColor =
+    getSeverityColor(
+      event.severity,
+    );
 
   return (
     <Box
       sx={{
         display: "grid",
+
         gridTemplateColumns: {
-          xs: "28px minmax(0, 1fr)",
-          md: "34px 145px minmax(0, 1fr)",
+          xs:
+            "28px minmax(0, 1fr)",
+
+          md:
+            "34px 145px minmax(0, 1fr)",
         },
+
         gap: {
           xs: 1,
           md: 1.25,
         },
-        alignItems: "stretch",
+
+        alignItems:
+          "stretch",
       }}
     >
       <Box
         sx={{
-          position: "relative",
-          display: "flex",
-          justifyContent: "center",
+          position:
+            "relative",
+
+          display:
+            "flex",
+
+          justifyContent:
+            "center",
         }}
       >
         <Box
           sx={{
             width: 12,
             height: 12,
-            borderRadius: "50%",
-            bgcolor: severityColor,
-            border: "3px solid #FFFFFF",
-            boxShadow: `0 0 0 2px ${severityColor}33`,
+
+            borderRadius:
+              "50%",
+
+            bgcolor:
+              severityColor,
+
+            border:
+              "3px solid #FFFFFF",
+
+            boxShadow:
+              `0 0 0 2px ${severityColor}33`,
+
             mt: 1.35,
+
             zIndex: 1,
           }}
         />
@@ -209,11 +301,17 @@ function TimelineEventRow({
         {!isLast && (
           <Box
             sx={{
-              position: "absolute",
+              position:
+                "absolute",
+
               top: 24,
+
               bottom: -12,
+
               width: 2,
-              bgcolor: "#E2E8F0",
+
+              bgcolor:
+                "#E2E8F0",
             }}
           />
         )}
@@ -225,6 +323,7 @@ function TimelineEventRow({
             xs: "none",
             md: "block",
           },
+
           pt: 1,
         }}
       >
@@ -232,22 +331,31 @@ function TimelineEventRow({
           component="div"
           sx={{
             fontWeight: 900,
+
             fontSize: 11.5,
+
             lineHeight: 1.25,
           }}
         >
-          {formatDate(event.occurredAt)}
+          {formatDate(
+            event.occurredAt,
+          )}
         </Typography>
 
         <Typography
           component="div"
           sx={{
-            color: "text.secondary",
+            color:
+              "text.secondary",
+
             fontSize: 10.5,
+
             mt: 0.25,
           }}
         >
-          {event.sourceNumber}
+          {
+            event.sourceNumber
+          }
         </Typography>
       </Box>
 
@@ -255,10 +363,14 @@ function TimelineEventRow({
         role="button"
         tabIndex={0}
         onClick={onOpen}
-        onKeyDown={(keyboardEvent) => {
+        onKeyDown={(
+          keyboardEvent,
+        ) => {
           if (
-            keyboardEvent.key === "Enter" ||
-            keyboardEvent.key === " "
+            keyboardEvent.key ===
+              "Enter" ||
+            keyboardEvent.key ===
+              " "
           ) {
             onOpen();
           }
@@ -268,102 +380,174 @@ function TimelineEventRow({
             xs: "2",
             md: "3",
           },
+
           mb: 1.25,
+
           px: {
             xs: 1.25,
             md: 1.5,
           },
+
           py: 1.25,
+
           borderRadius: 3,
-          bgcolor: getEventBackground(
-            event.severity
-          ),
-          border: `1px solid ${getEventBorder(
-            event.severity
-          )}`,
-          borderRight: `5px solid ${severityColor}`,
-          cursor: "pointer",
+
+          bgcolor:
+            getEventBackground(
+              event.severity,
+            ),
+
+          border:
+            `1px solid ${getEventBorder(
+              event.severity,
+            )}`,
+
+          borderRight:
+            `5px solid ${severityColor}`,
+
+          cursor:
+            "pointer",
+
           transition:
             "transform 150ms ease, box-shadow 150ms ease",
+
           "&:hover": {
-            transform: "translateY(-1px)",
+            transform:
+              "translateY(-1px)",
+
             boxShadow:
               "0 6px 16px rgba(15,23,42,0.08)",
           },
+
           "&:focus-visible": {
-            outline: "3px solid #2563EB",
+            outline:
+              "3px solid #2563EB",
+
             outlineOffset: 2,
           },
         }}
       >
         <Box
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
+            display:
+              "flex",
+
+            justifyContent:
+              "space-between",
+
             alignItems: {
-              xs: "flex-start",
-              md: "center",
+              xs:
+                "flex-start",
+
+              md:
+                "center",
             },
+
             flexDirection: {
-              xs: "column",
-              md: "row",
+              xs:
+                "column",
+
+              md:
+                "row",
             },
+
             gap: 1,
+
             mb: 0.75,
           }}
         >
-          <Box sx={{ minWidth: 0 }}>
+          <Box
+            sx={{
+              minWidth: 0,
+            }}
+          >
             <Typography
               component="div"
               sx={{
-                fontWeight: 900,
-                fontSize: 13.5,
-                lineHeight: 1.35,
-                overflowWrap: "anywhere",
+                fontWeight:
+                  900,
+
+                fontSize:
+                  13.5,
+
+                lineHeight:
+                  1.35,
+
+                overflowWrap:
+                  "anywhere",
               }}
             >
-              {event.title}
+              {
+                event.title
+              }
             </Typography>
 
             <Typography
               component="div"
               sx={{
                 display: {
-                  xs: "block",
-                  md: "none",
+                  xs:
+                    "block",
+
+                  md:
+                    "none",
                 },
-                color: "text.secondary",
-                fontSize: 10.5,
+
+                color:
+                  "text.secondary",
+
+                fontSize:
+                  10.5,
+
                 mt: 0.3,
               }}
             >
-              {formatDate(event.occurredAt)} ·{" "}
-              {event.sourceNumber}
+              {formatDate(
+                event.occurredAt,
+              )}{" "}
+              ·{" "}
+              {
+                event.sourceNumber
+              }
             </Typography>
           </Box>
 
           <Box
             sx={{
-              display: "flex",
-              flexWrap: "wrap",
+              display:
+                "flex",
+
+              flexWrap:
+                "wrap",
+
               gap: 0.6,
+
               flexShrink: 0,
             }}
           >
             <Chip
-              label={getEventTypeLabel(
-                event.eventType
-              )}
+              label={
+                getEventTypeLabel(
+                  event.eventType,
+                )
+              }
               size="small"
               sx={{
-                bgcolor: severityColor,
-                color: "white",
-                fontWeight: 900,
+                bgcolor:
+                  severityColor,
+
+                color:
+                  "white",
+
+                fontWeight:
+                  900,
               }}
             />
 
             <Chip
-              label={event.statusLabel}
+              label={
+                event.statusLabel
+              }
               size="small"
               variant="outlined"
             />
@@ -381,24 +565,42 @@ function TimelineEventRow({
         <Typography
           component="div"
           sx={{
-            color: "text.primary",
-            fontSize: 11.75,
-            lineHeight: 1.5,
+            color:
+              "text.primary",
+
+            fontSize:
+              11.75,
+
+            lineHeight:
+              1.5,
+
             mb: 0.75,
-            whiteSpace: "pre-wrap",
+
+            whiteSpace:
+              "pre-wrap",
           }}
         >
-          {event.description}
+          {
+            event.description
+          }
         </Typography>
 
         <Box
           sx={{
-            display: "flex",
-            flexWrap: "wrap",
+            display:
+              "flex",
+
+            flexWrap:
+              "wrap",
+
             gap: 1.25,
-            alignItems: "center",
+
+            alignItems:
+              "center",
+
             mb:
-              event.details.length > 0
+              event.details
+                .length > 0
                 ? 0.75
                 : 0,
           }}
@@ -406,69 +608,101 @@ function TimelineEventRow({
           <Typography
             component="div"
             sx={{
-              color: "text.secondary",
-              fontSize: 10.5,
+              color:
+                "text.secondary",
+
+              fontSize:
+                10.5,
             }}
           >
             אחראי:{" "}
             <Box
               component="span"
               sx={{
-                color: "text.primary",
-                fontWeight: 800,
+                color:
+                  "text.primary",
+
+                fontWeight:
+                  800,
               }}
             >
-              {event.responsibleName}
+              {
+                event.responsibleName
+              }
             </Box>
           </Typography>
 
-          {event.durationMinutes !== null && (
+          {event.durationMinutes !==
+            null && (
             <Typography
               component="div"
               sx={{
-                color: "text.secondary",
-                fontSize: 10.5,
+                color:
+                  "text.secondary",
+
+                fontSize:
+                  10.5,
               }}
             >
               משך:{" "}
               <Box
                 component="span"
                 sx={{
-                  color: severityColor,
-                  fontWeight: 900,
+                  color:
+                    severityColor,
+
+                  fontWeight:
+                    900,
                 }}
               >
                 {formatMinutes(
-                  event.durationMinutes
+                  event.durationMinutes,
                 )}
               </Box>
             </Typography>
           )}
         </Box>
 
-        {event.details.length > 0 && (
+        {event.details.length >
+          0 && (
           <Box
             sx={{
-              display: "flex",
-              flexWrap: "wrap",
+              display:
+                "flex",
+
+              flexWrap:
+                "wrap",
+
               gap: 0.6,
             }}
           >
-            {event.details.map((detail) => (
-              <Chip
-                key={detail}
-                label={detail}
-                size="small"
-                variant="outlined"
-                sx={{
-                  maxWidth: "100%",
-                  "& .MuiChip-label": {
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  },
-                }}
-              />
-            ))}
+            {event.details.map(
+              (detail) => (
+                <Chip
+                  key={
+                    detail
+                  }
+                  label={
+                    detail
+                  }
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    maxWidth:
+                      "100%",
+
+                    "& .MuiChip-label":
+                      {
+                        overflow:
+                          "hidden",
+
+                        textOverflow:
+                          "ellipsis",
+                      },
+                  }}
+                />
+              ),
+            )}
           </Box>
         )}
       </Box>
@@ -479,56 +713,94 @@ function TimelineEventRow({
 export default function MachineTimeline({
   snapshot,
 }: MachineTimelineProps) {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const [filter, setFilter] =
-    useState<TimelineFilter>("all");
-
-  const filteredEvents = useMemo(() => {
-    if (filter === "all") {
-      return snapshot.events;
-    }
-
-    return snapshot.events.filter(
-      (event) =>
-        event.eventType === filter
+  const [
+    filter,
+    setFilter,
+  ] =
+    useState<TimelineFilter>(
+      "all",
     );
-  }, [filter, snapshot.events]);
+
+  const filteredEvents =
+    useMemo(() => {
+      if (
+        filter === "all"
+      ) {
+        return snapshot.events;
+      }
+
+      return snapshot.events.filter(
+        (event) =>
+          event.eventType ===
+          filter,
+      );
+    }, [
+      filter,
+      snapshot.events,
+    ]);
 
   const filters: Array<{
-    value: TimelineFilter;
+    value:
+      TimelineFilter;
+
     label: string;
   }> = [
     {
       value: "all",
-      label: `הכול (${snapshot.summary.totalEvents})`,
+
+      label:
+        `הכול (${snapshot.summary.totalEvents})`,
     },
+
     {
-      value: "breakdown",
-      label: `תקלות (${snapshot.summary.breakdownEvents})`,
+      value:
+        "breakdown",
+
+      label:
+        `תקלות (${snapshot.summary.breakdownEvents})`,
     },
+
     {
-      value: "preventive_maintenance",
-      label: `PM (${snapshot.summary.preventiveMaintenanceEvents})`,
+      value:
+        "preventive_maintenance",
+
+      label:
+        `PM (${snapshot.summary.preventiveMaintenanceEvents})`,
     },
+
     {
-      value: "safety",
-      label: `בטיחות (${snapshot.summary.safetyEvents})`,
+      value:
+        "safety",
+
+      label:
+        `בטיחות (${snapshot.summary.safetyEvents})`,
     },
+
     {
-      value: "inspection",
-      label: `בדיקות (${snapshot.summary.inspectionEvents})`,
+      value:
+        "inspection",
+
+      label:
+        `בדיקות (${snapshot.summary.inspectionEvents})`,
     },
   ];
 
   return (
-    <Card sx={{ mb: 2 }}>
+    <Card
+      sx={{
+        mb: 2,
+      }}
+    >
       <CardContent
         sx={{
           p: {
             xs: 1.5,
             md: 2,
           },
+
           "&:last-child": {
             pb: {
               xs: 1.5,
@@ -539,18 +811,30 @@ export default function MachineTimeline({
       >
         <Box
           sx={{
-            display: "flex",
+            display:
+              "flex",
+
             justifyContent:
               "space-between",
+
             alignItems: {
-              xs: "flex-start",
-              md: "center",
+              xs:
+                "flex-start",
+
+              md:
+                "center",
             },
+
             flexDirection: {
-              xs: "column",
-              md: "row",
+              xs:
+                "column",
+
+              md:
+                "row",
             },
+
             gap: 1,
+
             mb: 1.5,
           }}
         >
@@ -558,8 +842,12 @@ export default function MachineTimeline({
             <Typography
               component="h2"
               sx={{
-                fontWeight: 900,
-                fontSize: 16,
+                fontWeight:
+                  900,
+
+                fontSize:
+                  16,
+
                 mb: 0.25,
               }}
             >
@@ -569,8 +857,11 @@ export default function MachineTimeline({
             <Typography
               component="div"
               sx={{
-                color: "text.secondary",
-                fontSize: 11,
+                color:
+                  "text.secondary",
+
+                fontSize:
+                  11,
               }}
             >
               תקלות, טיפולים מונעים ואירועים
@@ -580,58 +871,90 @@ export default function MachineTimeline({
 
           <Box
             sx={{
-              display: "flex",
-              flexWrap: "wrap",
+              display:
+                "flex",
+
+              flexWrap:
+                "wrap",
+
               gap: 0.6,
             }}
           >
-            {filters.map((item) => (
-              <Button
-                key={item.value}
-                variant={
-                  filter === item.value
-                    ? "contained"
-                    : "outlined"
-                }
-                size="small"
-                onClick={() =>
-                  setFilter(item.value)
-                }
-                sx={{
-                  fontWeight: 900,
-                }}
-              >
-                {item.label}
-              </Button>
-            ))}
+            {filters.map(
+              (item) => (
+                <Button
+                  key={
+                    item.value
+                  }
+                  variant={
+                    filter ===
+                    item.value
+                      ? "contained"
+                      : "outlined"
+                  }
+                  size="small"
+                  onClick={() =>
+                    setFilter(
+                      item.value,
+                    )
+                  }
+                  sx={{
+                    fontWeight:
+                      900,
+                  }}
+                >
+                  {
+                    item.label
+                  }
+                </Button>
+              ),
+            )}
           </Box>
         </Box>
 
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "repeat(2, minmax(0, 1fr))",
-              sm: "repeat(4, minmax(0, 1fr))",
-            },
+            display:
+              "grid",
+
+            gridTemplateColumns:
+              {
+                xs:
+                  "repeat(2, minmax(0, 1fr))",
+
+                sm:
+                  "repeat(4, minmax(0, 1fr))",
+              },
+
             gap: 0.75,
+
             mb: 1.5,
           }}
         >
           <Box
             sx={{
               px: 1.15,
+
               py: 0.8,
-              borderRadius: 2.25,
-              bgcolor: "#F8FAFC",
-              border: "1px solid #E2E8F0",
+
+              borderRadius:
+                2.25,
+
+              bgcolor:
+                "#F8FAFC",
+
+              border:
+                "1px solid #E2E8F0",
             }}
           >
             <Typography
               component="div"
               sx={{
-                color: "text.secondary",
-                fontSize: 9.5,
+                color:
+                  "text.secondary",
+
+                fontSize:
+                  9.5,
               }}
             >
               אירועים ב־7 ימים
@@ -640,28 +963,45 @@ export default function MachineTimeline({
             <Typography
               component="div"
               sx={{
-                fontWeight: 900,
-                fontSize: 17,
+                fontWeight:
+                  900,
+
+                fontSize:
+                  17,
               }}
             >
-              {snapshot.summary.eventsLast7Days}
+              {
+                snapshot
+                  .summary
+                  .eventsLast7Days
+              }
             </Typography>
           </Box>
 
           <Box
             sx={{
               px: 1.15,
+
               py: 0.8,
-              borderRadius: 2.25,
-              bgcolor: "#F8FAFC",
-              border: "1px solid #E2E8F0",
+
+              borderRadius:
+                2.25,
+
+              bgcolor:
+                "#F8FAFC",
+
+              border:
+                "1px solid #E2E8F0",
             }}
           >
             <Typography
               component="div"
               sx={{
-                color: "text.secondary",
-                fontSize: 9.5,
+                color:
+                  "text.secondary",
+
+                fontSize:
+                  9.5,
               }}
             >
               אירועים ב־30 ימים
@@ -670,27 +1010,41 @@ export default function MachineTimeline({
             <Typography
               component="div"
               sx={{
-                fontWeight: 900,
-                fontSize: 17,
+                fontWeight:
+                  900,
+
+                fontSize:
+                  17,
               }}
             >
-              {snapshot.summary.eventsLast30Days}
+              {
+                snapshot
+                  .summary
+                  .eventsLast30Days
+              }
             </Typography>
           </Box>
 
           <Box
             sx={{
               px: 1.15,
+
               py: 0.8,
-              borderRadius: 2.25,
+
+              borderRadius:
+                2.25,
+
               bgcolor:
                 snapshot.summary
-                  .downtimeEvents > 0
+                  .downtimeEvents >
+                0
                   ? "#FEF2F2"
                   : "#F0FDF4",
+
               border:
                 snapshot.summary
-                  .downtimeEvents > 0
+                  .downtimeEvents >
+                0
                   ? "1px solid #FECACA"
                   : "1px solid #BBF7D0",
             }}
@@ -698,8 +1052,11 @@ export default function MachineTimeline({
             <Typography
               component="div"
               sx={{
-                color: "text.secondary",
-                fontSize: 9.5,
+                color:
+                  "text.secondary",
+
+                fontSize:
+                  9.5,
               }}
             >
               אירועי השבתה
@@ -708,33 +1065,53 @@ export default function MachineTimeline({
             <Typography
               component="div"
               sx={{
-                fontWeight: 900,
-                fontSize: 17,
+                fontWeight:
+                  900,
+
+                fontSize:
+                  17,
+
                 color:
-                  snapshot.summary
-                    .downtimeEvents > 0
+                  snapshot
+                    .summary
+                    .downtimeEvents >
+                  0
                     ? "#DC2626"
                     : "#16A34A",
               }}
             >
-              {snapshot.summary.downtimeEvents}
+              {
+                snapshot
+                  .summary
+                  .downtimeEvents
+              }
             </Typography>
           </Box>
 
           <Box
             sx={{
               px: 1.15,
+
               py: 0.8,
-              borderRadius: 2.25,
-              bgcolor: "#EFF6FF",
-              border: "1px solid #BFDBFE",
+
+              borderRadius:
+                2.25,
+
+              bgcolor:
+                "#EFF6FF",
+
+              border:
+                "1px solid #BFDBFE",
             }}
           >
             <Typography
               component="div"
               sx={{
-                color: "text.secondary",
-                fontSize: 9.5,
+                color:
+                  "text.secondary",
+
+                fontSize:
+                  9.5,
               }}
             >
               טיפולים מונעים
@@ -743,35 +1120,55 @@ export default function MachineTimeline({
             <Typography
               component="div"
               sx={{
-                fontWeight: 900,
-                fontSize: 17,
-                color: "#2563EB",
+                fontWeight:
+                  900,
+
+                fontSize:
+                  17,
+
+                color:
+                  "#2563EB",
               }}
             >
               {
-                snapshot.summary
+                snapshot
+                  .summary
                   .preventiveMaintenanceEvents
               }
             </Typography>
           </Box>
         </Box>
 
-        {filteredEvents.length === 0 ? (
+        {filteredEvents.length ===
+        0 ? (
           <Box
             sx={{
               px: 2,
+
               py: 2.5,
-              borderRadius: 3,
-              bgcolor: "#F8FAFC",
-              border: "1px solid #E2E8F0",
-              textAlign: "center",
+
+              borderRadius:
+                3,
+
+              bgcolor:
+                "#F8FAFC",
+
+              border:
+                "1px solid #E2E8F0",
+
+              textAlign:
+                "center",
             }}
           >
             <Typography
               component="div"
               sx={{
-                fontWeight: 900,
-                fontSize: 13,
+                fontWeight:
+                  900,
+
+                fontSize:
+                  13,
+
                 mb: 0.25,
               }}
             >
@@ -781,8 +1178,11 @@ export default function MachineTimeline({
             <Typography
               component="div"
               sx={{
-                color: "text.secondary",
-                fontSize: 11,
+                color:
+                  "text.secondary",
+
+                fontSize:
+                  11,
               }}
             >
               לא נמצאו אירועים שמתאימים לסינון
@@ -792,22 +1192,30 @@ export default function MachineTimeline({
         ) : (
           <Box>
             {filteredEvents.map(
-              (event, index) => (
+              (
+                event,
+                index,
+              ) => (
                 <TimelineEventRow
-                  key={event.id}
-                  event={event}
+                  key={
+                    event.id
+                  }
+                  event={
+                    event
+                  }
                   isLast={
                     index ===
-                    filteredEvents.length - 1
+                    filteredEvents.length -
+                      1
                   }
                   onOpen={() =>
                     openEvent(
                       event,
-                      navigate
+                      navigate,
                     )
                   }
                 />
-              )
+              ),
             )}
           </Box>
         )}

@@ -1,4 +1,6 @@
-import type { WorkOrder } from "../../../types/workOrder";
+import type {
+  WorkOrder,
+} from "../../../types/workOrder";
 
 import {
   createMieEvidence,
@@ -12,42 +14,64 @@ import {
 } from "../types";
 
 type FailureGroup = {
-  normalizedDescription: string;
-  exampleDescription: string;
+  normalizedDescription:
+    string;
+
+  exampleDescription:
+    string;
 
   count: number;
-  downtimeCount: number;
 
-  workOrders: WorkOrder[];
+  downtimeCount:
+    number;
 
-  firstOccurredAt: string;
-  lastOccurredAt: string;
+  workOrders:
+    WorkOrder[];
+
+  firstOccurredAt:
+    string;
+
+  lastOccurredAt:
+    string;
 };
 
-const configuration: MieRuleConfiguration = {
+const configuration:
+  MieRuleConfiguration = {
   id: "MIE-RULE-001",
 
-  name: "Recurring Failures",
-  description:
-    "מזהה תקלות שחזרו מספר פעמים באותה מכונה במהלך חלון זמן מוגדר.",
+  name:
+    "Recurring Failures",
 
-  category: "reliability",
+  description:
+    "מזהה תקלות שחזרו מספר פעמים באותו נכס במהלך חלון זמן מוגדר.",
+
+  category:
+    "reliability",
 
   enabled: true,
 
-  severity: "warning",
+  severity:
+    "warning",
 
   thresholds: {
-    minimumFailureCount: 3,
-    observationDays: 30,
-    minimumConfidencePercent: 65,
+    minimumFailureCount:
+      3,
+
+    observationDays:
+      30,
+
+    minimumConfidencePercent:
+      65,
   },
 
-  healthPenalty: 10,
+  healthPenalty:
+    10,
 
-  recommendationPriority: "high",
+  recommendationPriority:
+    "high",
 
-  actionType: "perform_rca",
+  actionType:
+    "perform_rca",
 
   recommendationTitle:
     "נדרש ניתוח שורש תקלה",
@@ -57,17 +81,24 @@ const configuration: MieRuleConfiguration = {
 };
 
 function normalizeText(
-  value: string
+  value: string,
 ): string {
   return value
     .trim()
     .toLowerCase()
-    .replace(/[.,:;!?()[\]{}"']/g, " ")
-    .replace(/\s+/g, " ");
+    .replace(
+      /[.,:;!?()[\]{}"']/g,
+      " ",
+    )
+    .replace(
+      /\s+/g,
+      " ",
+    );
 }
 
 function getMinimumTime(
-  observationDays: number
+  observationDays:
+    number,
 ): number {
   return (
     Date.now() -
@@ -81,156 +112,191 @@ function getMinimumTime(
 
 function isWithinObservationWindow(
   openedAt: string,
-  minimumTime: number
+  minimumTime: number,
 ): boolean {
   const openedTime =
-    new Date(openedAt).getTime();
+    new Date(
+      openedAt,
+    ).getTime();
 
   return (
-    !Number.isNaN(openedTime) &&
-    openedTime >= minimumTime
+    !Number.isNaN(
+      openedTime,
+    ) &&
+    openedTime >=
+      minimumTime
   );
 }
 
 function groupFailures(
-  context: MieRuleContext
+  context:
+    MieRuleContext,
 ): FailureGroup[] {
   const observationDays =
-    configuration.thresholds
-      .observationDays ?? 30;
+    configuration
+      .thresholds
+      .observationDays ??
+    30;
 
   const minimumTime =
     getMinimumTime(
-      observationDays
+      observationDays,
     );
 
-  const groups = new Map<
-    string,
-    FailureGroup
-  >();
+  const groups =
+    new Map<
+      string,
+      FailureGroup
+    >();
 
   context.workOrders
-    .filter((workOrder) =>
-      isWithinObservationWindow(
-        workOrder.openedAt,
-        minimumTime
-      )
+    .filter(
+      (workOrder) =>
+        isWithinObservationWindow(
+          workOrder.openedAt,
+          minimumTime,
+        ),
     )
-    .forEach((workOrder) => {
-      const normalizedDescription =
-        normalizeText(
-          workOrder.faultDescription
-        );
-
-      if (!normalizedDescription) {
-        return;
-      }
-
-      const existing =
-        groups.get(
-          normalizedDescription
-        );
-
-      if (existing) {
-        existing.count += 1;
-
-        if (workOrder.isDowntime) {
-          existing.downtimeCount += 1;
-        }
-
-        existing.workOrders.push(
-          workOrder
-        );
-
-        const openedTime =
-          new Date(
-            workOrder.openedAt
-          ).getTime();
-
-        const firstTime =
-          new Date(
-            existing.firstOccurredAt
-          ).getTime();
-
-        const lastTime =
-          new Date(
-            existing.lastOccurredAt
-          ).getTime();
+    .forEach(
+      (workOrder) => {
+        const normalizedDescription =
+          normalizeText(
+            workOrder
+              .faultDescription,
+          );
 
         if (
-          !Number.isNaN(openedTime) &&
-          openedTime < firstTime
+          !normalizedDescription
         ) {
-          existing.firstOccurredAt =
-            workOrder.openedAt;
+          return;
         }
 
-        if (
-          !Number.isNaN(openedTime) &&
-          openedTime > lastTime
-        ) {
-          existing.lastOccurredAt =
-            workOrder.openedAt;
+        const existing =
+          groups.get(
+            normalizedDescription,
+          );
 
-          existing.exampleDescription =
-            workOrder.faultDescription;
-        }
+        if (existing) {
+          existing.count += 1;
 
-        return;
-      }
-
-      groups.set(
-        normalizedDescription,
-        {
-          normalizedDescription,
-
-          exampleDescription:
-            workOrder.faultDescription,
-
-          count: 1,
-
-          downtimeCount:
+          if (
             workOrder.isDowntime
-              ? 1
-              : 0,
+          ) {
+            existing.downtimeCount += 1;
+          }
 
-          workOrders: [workOrder],
+          existing.workOrders.push(
+            workOrder,
+          );
 
-          firstOccurredAt:
-            workOrder.openedAt,
+          const openedTime =
+            new Date(
+              workOrder.openedAt,
+            ).getTime();
 
-          lastOccurredAt:
-            workOrder.openedAt,
+          const firstTime =
+            new Date(
+              existing.firstOccurredAt,
+            ).getTime();
+
+          const lastTime =
+            new Date(
+              existing.lastOccurredAt,
+            ).getTime();
+
+          if (
+            !Number.isNaN(
+              openedTime,
+            ) &&
+            openedTime <
+              firstTime
+          ) {
+            existing.firstOccurredAt =
+              workOrder.openedAt;
+          }
+
+          if (
+            !Number.isNaN(
+              openedTime,
+            ) &&
+            openedTime >
+              lastTime
+          ) {
+            existing.lastOccurredAt =
+              workOrder.openedAt;
+
+            existing.exampleDescription =
+              workOrder.faultDescription;
+          }
+
+          return;
         }
-      );
-    });
+
+        groups.set(
+          normalizedDescription,
+          {
+            normalizedDescription,
+
+            exampleDescription:
+              workOrder
+                .faultDescription,
+
+            count: 1,
+
+            downtimeCount:
+              workOrder.isDowntime
+                ? 1
+                : 0,
+
+            workOrders: [
+              workOrder,
+            ],
+
+            firstOccurredAt:
+              workOrder.openedAt,
+
+            lastOccurredAt:
+              workOrder.openedAt,
+          },
+        );
+      },
+    );
 
   return Array.from(
-    groups.values()
-  ).sort((first, second) => {
-    if (
-      first.count !== second.count
-    ) {
-      return (
-        second.count -
-        first.count
-      );
-    }
+    groups.values(),
+  ).sort(
+    (
+      first,
+      second,
+    ) => {
+      if (
+        first.count !==
+        second.count
+      ) {
+        return (
+          second.count -
+          first.count
+        );
+      }
 
-    return (
-      new Date(
-        second.lastOccurredAt
-      ).getTime() -
-      new Date(
-        first.lastOccurredAt
-      ).getTime()
-    );
-  });
+      return (
+        new Date(
+          second.lastOccurredAt,
+        ).getTime() -
+        new Date(
+          first.lastOccurredAt,
+        ).getTime()
+      );
+    },
+  );
 }
 
 function calculateConfidence(
-  group: FailureGroup,
-  minimumFailureCount: number
+  group:
+    FailureGroup,
+
+  minimumFailureCount:
+    number,
 ): number {
   let confidence = 55;
 
@@ -240,19 +306,21 @@ function calculateConfidence(
       Math.max(
         0,
         group.count -
-          minimumFailureCount
-      ) * 6
+          minimumFailureCount,
+      ) * 6,
     );
 
   confidence +=
     Math.min(
       15,
-      group.downtimeCount * 5
+      group.downtimeCount *
+        5,
     );
 
   if (
     group.count >=
-    minimumFailureCount + 2
+    minimumFailureCount +
+      2
   ) {
     confidence += 5;
   }
@@ -261,122 +329,156 @@ function calculateConfidence(
     0,
     Math.min(
       100,
-      confidence
-    )
+      confidence,
+    ),
   );
 }
 
 function buildEvidence(
-  group: FailureGroup
+  group:
+    FailureGroup,
 ): MieEvidence[] {
-  const evidence: MieEvidence[] =
-    [
-      createMieEvidence({
-        type: "calculated_metric",
+  const evidence:
+    MieEvidence[] = [
+    createMieEvidence({
+      type:
+        "calculated_metric",
 
-        label:
-          "מספר חזרות של אותה תקלה",
+      label:
+        "מספר חזרות של אותה תקלה",
 
-        value:
-          String(group.count),
+      value:
+        String(
+          group.count,
+        ),
 
-        sourceId: null,
-        sourceNumber: null,
+      sourceId:
+        null,
 
-        occurredAt:
-          group.lastOccurredAt,
+      sourceNumber:
+        null,
 
-        weight: 1,
-      }),
+      occurredAt:
+        group.lastOccurredAt,
 
-      createMieEvidence({
-        type: "calculated_metric",
+      weight: 1,
+    }),
 
-        label:
-          "מספר תקלות משביתות מתוך הקבוצה",
+    createMieEvidence({
+      type:
+        "calculated_metric",
 
-        value:
-          String(
-            group.downtimeCount
-          ),
+      label:
+        "מספר תקלות משביתות מתוך הקבוצה",
 
-        sourceId: null,
-        sourceNumber: null,
+      value:
+        String(
+          group.downtimeCount,
+        ),
 
-        occurredAt:
-          group.lastOccurredAt,
+      sourceId:
+        null,
 
-        weight:
-          group.downtimeCount > 0
-            ? 1
-            : 0.5,
-      }),
+      sourceNumber:
+        null,
 
-      createMieEvidence({
-        type: "calculated_metric",
+      occurredAt:
+        group.lastOccurredAt,
 
-        label:
-          "חלון התצפית",
+      weight:
+        group.downtimeCount >
+        0
+          ? 1
+          : 0.5,
+    }),
 
-        value: `${
-          configuration.thresholds
-            .observationDays ?? 30
+    createMieEvidence({
+      type:
+        "calculated_metric",
+
+      label:
+        "חלון התצפית",
+
+      value:
+        `${
+          configuration
+            .thresholds
+            .observationDays ??
+          30
         } ימים`,
 
-        sourceId: null,
-        sourceNumber: null,
+      sourceId:
+        null,
 
-        occurredAt:
-          group.lastOccurredAt,
+      sourceNumber:
+        null,
 
-        weight: 0.7,
-      }),
-    ];
+      occurredAt:
+        group.lastOccurredAt,
+
+      weight:
+        0.7,
+    }),
+  ];
 
   group.workOrders
-    .slice(0, 5)
-    .forEach((workOrder) => {
-      evidence.push(
-        createMieEvidence({
-          type: "work_order",
+    .slice(
+      0,
+      5,
+    )
+    .forEach(
+      (workOrder) => {
+        evidence.push(
+          createMieEvidence({
+            type:
+              "work_order",
 
-          label:
-            workOrder.faultDescription,
+            label:
+              workOrder
+                .faultDescription,
 
-          value:
-            workOrder.status ===
-            "closed"
-              ? "סגור"
-              : "פתוח",
+            value:
+              workOrder.status ===
+              "closed"
+                ? "סגור"
+                : "פתוח",
 
-          sourceId:
-            workOrder.id,
+            sourceId:
+              workOrder.id,
 
-          sourceNumber:
-            workOrder.workOrderNumber,
+            sourceNumber:
+              workOrder
+                .workOrderNumber,
 
-          occurredAt:
-            workOrder.openedAt,
+            occurredAt:
+              workOrder
+                .openedAt,
 
-          weight:
-            workOrder.isDowntime
-              ? 1
-              : 0.8,
-        })
-      );
-    });
+            weight:
+              workOrder.isDowntime
+                ? 1
+                : 0.8,
+          }),
+        );
+      },
+    );
 
   return evidence;
 }
 
 function evaluateRecurringFailures(
-  context: MieRuleContext
+  context:
+    MieRuleContext,
 ): MieRuleResult {
-  if (!configuration.enabled) {
+  if (
+    !configuration.enabled
+  ) {
     return createMieRuleResult({
-      rule: configuration,
+      rule:
+        configuration,
 
-      status: "disabled",
+      status:
+        "disabled",
 
       title:
         "החוק אינו פעיל",
@@ -384,20 +486,28 @@ function evaluateRecurringFailures(
       description:
         "בדיקת תקלות חוזרות מושבתת בהגדרות.",
 
-      confidencePercent: 100,
+      confidencePercent:
+        100,
     });
   }
 
   const minimumFailureCount =
-    configuration.thresholds
-      .minimumFailureCount ?? 3;
+    configuration
+      .thresholds
+      .minimumFailureCount ??
+    3;
 
   const groups =
-    groupFailures(context);
+    groupFailures(
+      context,
+    );
 
-  if (groups.length === 0) {
+  if (
+    groups.length === 0
+  ) {
     return createMieRuleResult({
-      rule: configuration,
+      rule:
+        configuration,
 
       status:
         "insufficient_data",
@@ -408,7 +518,8 @@ function evaluateRecurringFailures(
       description:
         "לא נמצאו קריאות בתקופת התצפית שניתן לנתח.",
 
-      confidencePercent: 100,
+      confidencePercent:
+        100,
     });
   }
 
@@ -416,33 +527,39 @@ function evaluateRecurringFailures(
     groups.find(
       (group) =>
         group.count >=
-        minimumFailureCount
+        minimumFailureCount,
     );
 
-  if (!recurringGroup) {
+  if (
+    !recurringGroup
+  ) {
     return createMieRuleResult({
-      rule: configuration,
+      rule:
+        configuration,
 
-      status: "passed",
+      status:
+        "passed",
 
       title:
         "לא זוהתה תקלה חוזרת",
 
-      description: `לא נמצאה תקלה שחזרה לפחות ${minimumFailureCount} פעמים בתקופת התצפית.`,
+      description:
+        `לא נמצאה תקלה שחזרה לפחות ${minimumFailureCount} פעמים בתקופת התצפית.`,
 
-      confidencePercent: 100,
+      confidencePercent:
+        100,
     });
   }
 
   const evidence =
     buildEvidence(
-      recurringGroup
+      recurringGroup,
     );
 
   const confidencePercent =
     calculateConfidence(
       recurringGroup,
-      minimumFailureCount
+      minimumFailureCount,
     );
 
   const recommendation =
@@ -450,21 +567,32 @@ function evaluateRecurringFailures(
       ruleId:
         configuration.id,
 
+      assetId:
+        context.assetId,
+
       assetNumber:
         context.assetNumber,
 
+      assetCode:
+        context.assetCode,
+
+      /*
+       * Legacy compatibility
+       */
       machineCode:
         context.machineCode,
 
       priority:
-        recurringGroup.downtimeCount >
+        recurringGroup
+          .downtimeCount >
         0
           ? "urgent"
           : configuration
               .recommendationPriority,
 
       actionType:
-        configuration.actionType,
+        configuration
+          .actionType,
 
       title:
         configuration
@@ -474,7 +602,8 @@ function evaluateRecurringFailures(
         configuration
           .recommendationDescription,
 
-      reason: `התקלה "${recurringGroup.exampleDescription}" הופיעה ${recurringGroup.count} פעמים במהלך תקופת התצפית, מתוכן ${recurringGroup.downtimeCount} תקלות משביתות.`,
+      reason:
+        `התקלה "${recurringGroup.exampleDescription}" הופיעה ${recurringGroup.count} פעמים במהלך תקופת התצפית, מתוכן ${recurringGroup.downtimeCount} תקלות משביתות.`,
 
       confidencePercent,
 
@@ -482,22 +611,28 @@ function evaluateRecurringFailures(
 
       relatedWorkOrderId:
         recurringGroup
-          .workOrders[0]?.id ??
+          .workOrders[0]
+          ?.id ??
         null,
     });
 
   return createMieRuleResult({
-    rule: configuration,
+    rule:
+      configuration,
 
-    status: "triggered",
+    status:
+      "triggered",
 
     title:
       "זוהתה תקלה חוזרת",
 
-    description: `התקלה "${recurringGroup.exampleDescription}" חזרה ${recurringGroup.count} פעמים במהלך ${
-      configuration.thresholds
-        .observationDays ?? 30
-    } הימים האחרונים.`,
+    description:
+      `התקלה "${recurringGroup.exampleDescription}" חזרה ${recurringGroup.count} פעמים במהלך ${
+        configuration
+          .thresholds
+          .observationDays ??
+        30
+      } הימים האחרונים.`,
 
     confidencePercent,
 
@@ -507,10 +642,10 @@ function evaluateRecurringFailures(
   });
 }
 
-export const recurringFailuresRule: MieRule =
-  {
-    configuration,
+export const recurringFailuresRule:
+  MieRule = {
+  configuration,
 
-    evaluate:
-      evaluateRecurringFailures,
-  };
+  evaluate:
+    evaluateRecurringFailures,
+};

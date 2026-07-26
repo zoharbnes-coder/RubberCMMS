@@ -9,15 +9,25 @@ import type {
   MieSeverity,
 } from "./types";
 
-import { recurringFailuresRule } from "./rules/recurringFailuresRule";
-import { overduePmRule } from "./rules/overduePmRule";
+import {
+  recurringFailuresRule,
+} from "./rules/recurringFailuresRule";
 
-const registeredRules: MieRule[] = [
+import {
+  overduePmRule,
+} from "./rules/overduePmRule";
+
+const registeredRules:
+  MieRule[] = [
   recurringFailuresRule,
   overduePmRule,
 ];
 
-const severityRank: Record<MieSeverity, number> = {
+const severityRank:
+  Record<
+    MieSeverity,
+    number
+  > = {
   positive: 0,
   info: 1,
   warning: 2,
@@ -25,10 +35,11 @@ const severityRank: Record<MieSeverity, number> = {
   critical: 4,
 };
 
-const recommendationPriorityRank: Record<
-  MieRecommendation["priority"],
-  number
-> = {
+const recommendationPriorityRank:
+  Record<
+    MieRecommendation["priority"],
+    number
+  > = {
   low: 1,
   medium: 2,
   high: 3,
@@ -38,53 +49,69 @@ const recommendationPriorityRank: Record<
 function clampNumber(
   value: number,
   minimum: number,
-  maximum: number
+  maximum: number,
 ): number {
   return Math.max(
     minimum,
-    Math.min(maximum, value)
+    Math.min(
+      maximum,
+      value,
+    ),
   );
 }
 
 function calculateHealthScore(
   baseHealthScore: number,
-  results: MieRuleResult[]
+  results: MieRuleResult[],
 ): number {
-  const totalPenalty = results
-    .filter(
-      (result) =>
-        result.status === "triggered"
-    )
-    .reduce(
-      (total, result) =>
-        total + result.healthPenalty,
-      0
-    );
+  const totalPenalty =
+    results
+      .filter(
+        (result) =>
+          result.status ===
+          "triggered",
+      )
+      .reduce(
+        (
+          total,
+          result,
+        ) =>
+          total +
+          result.healthPenalty,
+        0,
+      );
 
   return clampNumber(
     Math.round(
-      baseHealthScore - totalPenalty
+      baseHealthScore -
+        totalPenalty,
     ),
     0,
-    100
+    100,
   );
 }
 
 function getRiskLevel(
   healthScore: number,
-  results: MieRuleResult[]
+  results: MieRuleResult[],
 ): MieRiskLevel {
-  const hasCriticalRule = results.some(
-    (result) =>
-      result.status === "triggered" &&
-      result.severity === "critical"
-  );
+  const hasCriticalRule =
+    results.some(
+      (result) =>
+        result.status ===
+          "triggered" &&
+        result.severity ===
+          "critical",
+    );
 
-  const hasDangerRule = results.some(
-    (result) =>
-      result.status === "triggered" &&
-      result.severity === "danger"
-  );
+  const hasDangerRule =
+    results.some(
+      (result) =>
+        result.status ===
+          "triggered" &&
+        result.severity ===
+          "danger",
+    );
 
   if (
     hasCriticalRule ||
@@ -100,11 +127,14 @@ function getRiskLevel(
     return "high";
   }
 
-  const hasWarningRule = results.some(
-    (result) =>
-      result.status === "triggered" &&
-      result.severity === "warning"
-  );
+  const hasWarningRule =
+    results.some(
+      (result) =>
+        result.status ===
+          "triggered" &&
+        result.severity ===
+          "warning",
+    );
 
   if (
     hasWarningRule ||
@@ -117,39 +147,52 @@ function getRiskLevel(
 }
 
 function getHighestSeverity(
-  results: MieRuleResult[]
+  results: MieRuleResult[],
 ): MieSeverity {
-  if (results.length === 0) {
+  if (
+    results.length === 0
+  ) {
     return "positive";
   }
 
   return results.reduce<MieSeverity>(
-    (highestSeverity, result) =>
-      severityRank[result.severity] >
-      severityRank[highestSeverity]
+    (
+      highestSeverity,
+      result,
+    ) =>
+      severityRank[
+        result.severity
+      ] >
+      severityRank[
+        highestSeverity
+      ]
         ? result.severity
         : highestSeverity,
-    "positive"
+    "positive",
   );
 }
 
 function collectRecommendations(
-  results: MieRuleResult[]
+  results: MieRuleResult[],
 ): MieRecommendation[] {
-  const recommendations = results
-    .map(
-      (result) =>
-        result.recommendation
-    )
-    .filter(
-      (
-        recommendation
-      ): recommendation is MieRecommendation =>
-        recommendation !== null
-    );
+  const recommendations =
+    results
+      .map(
+        (result) =>
+          result.recommendation,
+      )
+      .filter(
+        (
+          recommendation,
+        ): recommendation is MieRecommendation =>
+          recommendation !== null,
+      );
 
   return recommendations.sort(
-    (first, second) => {
+    (
+      first,
+      second,
+    ) => {
       const priorityDifference =
         recommendationPriorityRank[
           second.priority
@@ -158,7 +201,10 @@ function collectRecommendations(
           first.priority
         ];
 
-      if (priorityDifference !== 0) {
+      if (
+        priorityDifference !==
+        0
+      ) {
         return priorityDifference;
       }
 
@@ -174,19 +220,20 @@ function collectRecommendations(
 
       return (
         new Date(
-          second.createdAt
+          second.createdAt,
         ).getTime() -
         new Date(
-          first.createdAt
+          first.createdAt,
         ).getTime()
       );
-    }
+    },
   );
 }
 
 function buildEngineSummary(
   results: MieRuleResult[],
-  recommendations: MieRecommendation[]
+  recommendations:
+    MieRecommendation[],
 ): MieEngineSummary {
   return {
     totalRules:
@@ -195,51 +242,65 @@ function buildEngineSummary(
     triggeredRules:
       results.filter(
         (result) =>
-          result.status === "triggered"
+          result.status ===
+          "triggered",
       ).length,
 
     passedRules:
       results.filter(
         (result) =>
-          result.status === "passed"
+          result.status ===
+          "passed",
       ).length,
 
     warningRules:
       results.filter(
         (result) =>
-          result.status === "triggered" &&
-          result.severity === "warning"
+          result.status ===
+            "triggered" &&
+          result.severity ===
+            "warning",
       ).length,
 
     dangerRules:
       results.filter(
         (result) =>
-          result.status === "triggered" &&
-          result.severity === "danger"
+          result.status ===
+            "triggered" &&
+          result.severity ===
+            "danger",
       ).length,
 
     criticalRules:
       results.filter(
         (result) =>
-          result.status === "triggered" &&
-          result.severity === "critical"
+          result.status ===
+            "triggered" &&
+          result.severity ===
+            "critical",
       ).length,
 
     totalHealthPenalty:
       results
         .filter(
           (result) =>
-            result.status === "triggered"
+            result.status ===
+            "triggered",
         )
         .reduce(
-          (total, result) =>
+          (
+            total,
+            result,
+          ) =>
             total +
             result.healthPenalty,
-          0
+          0,
         ),
 
     highestSeverity:
-      getHighestSeverity(results),
+      getHighestSeverity(
+        results,
+      ),
 
     recommendationCount:
       recommendations.length,
@@ -248,17 +309,19 @@ function buildEngineSummary(
       recommendations.filter(
         (recommendation) =>
           recommendation.priority ===
-          "urgent"
+          "urgent",
       ).length,
   };
 }
 
 function evaluateRule(
   rule: MieRule,
-  context: MieRuleContext
+  context: MieRuleContext,
 ): MieRuleResult {
   try {
-    return rule.evaluate(context);
+    return rule.evaluate(
+      context,
+    );
   } catch (error) {
     const message =
       error instanceof Error
@@ -284,15 +347,19 @@ function evaluateRule(
       title:
         "החוק לא הצליח לרוץ",
 
-      description: `אירעה שגיאה בעת הרצת החוק: ${message}`,
+      description:
+        `אירעה שגיאה בעת הרצת החוק: ${message}`,
 
-      healthPenalty: 0,
+      healthPenalty:
+        0,
 
-      confidencePercent: 0,
+      confidencePercent:
+        0,
 
       evidence: [],
 
-      recommendation: null,
+      recommendation:
+        null,
 
       evaluatedAt:
         new Date().toISOString(),
@@ -302,20 +369,27 @@ function evaluateRule(
 
 export function getRegisteredMieRules():
   MieRule[] {
-  return [...registeredRules];
+  return [
+    ...registeredRules,
+  ];
 }
 
 export function registerMieRule(
-  rule: MieRule
+  rule: MieRule,
 ): void {
   const existingRuleIndex =
     registeredRules.findIndex(
       (registeredRule) =>
-        registeredRule.configuration.id ===
-        rule.configuration.id
+        registeredRule
+          .configuration
+          .id ===
+        rule.configuration.id,
     );
 
-  if (existingRuleIndex >= 0) {
+  if (
+    existingRuleIndex >=
+    0
+  ) {
     registeredRules[
       existingRuleIndex
     ] = rule;
@@ -323,26 +397,30 @@ export function registerMieRule(
     return;
   }
 
-  registeredRules.push(rule);
+  registeredRules.push(
+    rule,
+  );
 }
 
 export function removeMieRule(
-  ruleId: string
+  ruleId: string,
 ): boolean {
   const ruleIndex =
     registeredRules.findIndex(
       (rule) =>
         rule.configuration.id ===
-        ruleId
+        ruleId,
     );
 
-  if (ruleIndex < 0) {
+  if (
+    ruleIndex < 0
+  ) {
     return false;
   }
 
   registeredRules.splice(
     ruleIndex,
-    1
+    1,
   );
 
   return true;
@@ -351,38 +429,53 @@ export function removeMieRule(
 export function runMieRuleEngine(
   context: MieRuleContext,
   rules: MieRule[] =
-    registeredRules
+    registeredRules,
 ): MieEngineSnapshot {
-  const results = rules.map(
-    (rule) =>
-      evaluateRule(
-        rule,
-        context
-      )
-  );
+  const results =
+    rules.map(
+      (rule) =>
+        evaluateRule(
+          rule,
+          context,
+        ),
+    );
 
   const recommendations =
-    collectRecommendations(results);
+    collectRecommendations(
+      results,
+    );
 
   const calculatedHealthScore =
     calculateHealthScore(
       context.currentHealthScore,
-      results
+      results,
     );
 
   const riskLevel =
     getRiskLevel(
       calculatedHealthScore,
-      results
+      results,
     );
 
   return {
     generatedAt:
       new Date().toISOString(),
 
+    /*
+     * Asset identity
+     */
+    assetId:
+      context.assetId,
+
     assetNumber:
       context.assetNumber,
 
+    assetCode:
+      context.assetCode,
+
+    /*
+     * Legacy compatibility
+     */
     machineCode:
       context.machineCode,
 
@@ -400,7 +493,7 @@ export function runMieRuleEngine(
     summary:
       buildEngineSummary(
         results,
-        recommendations
+        recommendations,
       ),
   };
 }

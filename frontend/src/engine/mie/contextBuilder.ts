@@ -1,8 +1,10 @@
-import type { WorkOrder } from "../../types/workOrder";
+import type {
+  WorkOrder,
+} from "../../types/workOrder";
 
 import {
-  getMachineDetailsSnapshot,
-} from "../../services/machineDetailsService";
+  getAssetDetailsSnapshot,
+} from "../../services/assetDetailsService";
 
 import {
   getMachineExecutions,
@@ -14,260 +16,317 @@ import type {
 } from "./types";
 
 function getStartOfDaysAgo(
-  days: number
+  days: number,
 ): number {
   const date = new Date();
 
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() - days);
+  date.setHours(
+    0,
+    0,
+    0,
+    0,
+  );
+
+  date.setDate(
+    date.getDate() -
+      days,
+  );
 
   return date.getTime();
 }
 
 function isValidDateValue(
-  value: string
+  value: string,
 ): boolean {
   return !Number.isNaN(
-    new Date(value).getTime()
+    new Date(
+      value,
+    ).getTime(),
   );
 }
 
 function isWithinLastDays(
   value: string,
-  days: number
+  days: number,
 ): boolean {
-  if (!isValidDateValue(value)) {
+  if (
+    !isValidDateValue(
+      value,
+    )
+  ) {
     return false;
   }
 
   return (
-    new Date(value).getTime() >=
-    getStartOfDaysAgo(days)
+    new Date(
+      value,
+    ).getTime() >=
+    getStartOfDaysAgo(
+      days,
+    )
   );
 }
 
 function getRecentWorkOrders(
   workOrders: WorkOrder[],
-  days: number
+  days: number,
 ): WorkOrder[] {
   return workOrders.filter(
     (workOrder) =>
       isWithinLastDays(
         workOrder.openedAt,
-        days
-      )
+        days,
+      ),
   );
 }
 
 function getDowntimeFailures(
-  workOrders: WorkOrder[]
+  workOrders: WorkOrder[],
 ): WorkOrder[] {
   return workOrders.filter(
     (workOrder) =>
-      workOrder.isDowntime
+      workOrder.isDowntime,
   );
 }
 
 function calculateBaseHealthScore(
-  availabilityPercent: number
+  availabilityPercent: number,
 ): number {
   if (
     !Number.isFinite(
-      availabilityPercent
+      availabilityPercent,
     )
   ) {
     return 100;
   }
 
-  /*
-   * בשלב הראשון ציון הבסיס נגזר מהזמינות,
-   * אך נשמר בטווח 60–100.
-   *
-   * חוקי MIE יורידו ממנו נקודות בהתאם
-   * לתקלות חוזרות, PM באיחור וגורמי סיכון.
-   */
   const normalizedAvailability =
     Math.max(
       0,
       Math.min(
         100,
-        availabilityPercent
-      )
+        availabilityPercent,
+      ),
     );
 
   return Math.max(
     60,
     Math.round(
-      normalizedAvailability
-    )
+      normalizedAvailability,
+    ),
   );
 }
 
 function getDuePmCount(
-  assetNumber: string
+  assetNumber: string,
 ): number {
   return getMachineExecutions(
-    assetNumber
+    assetNumber,
   ).filter(
     (execution) =>
-      execution.status === "due"
+      execution.status ===
+      "due",
   ).length;
 }
 
 function getOverduePmCount(
-  assetNumber: string
+  assetNumber: string,
 ): number {
-  const now = Date.now();
+  const now =
+    Date.now();
 
   return getMachineExecutions(
-    assetNumber
-  ).filter((execution) => {
-    if (
-      execution.status ===
-        "completed" ||
-      execution.status ===
-        "cancelled"
-    ) {
-      return false;
-    }
+    assetNumber,
+  ).filter(
+    (execution) => {
+      if (
+        execution.status ===
+          "completed" ||
+        execution.status ===
+          "cancelled"
+      ) {
+        return false;
+      }
 
-    if (
-      execution.status ===
-      "overdue"
-    ) {
-      return true;
-    }
+      if (
+        execution.status ===
+        "overdue"
+      ) {
+        return true;
+      }
 
-    const dueTime =
-      new Date(
-        execution.dueAt
-      ).getTime();
+      const dueTime =
+        new Date(
+          execution.dueAt,
+        ).getTime();
 
-    return (
-      !Number.isNaN(dueTime) &&
-      dueTime < now
-    );
-  }).length;
+      return (
+        !Number.isNaN(
+          dueTime,
+        ) &&
+        dueTime < now
+      );
+    },
+  ).length;
 }
 
 export function buildMieRuleContext(
-  assetNumber: string
+  assetNumber: string,
 ): MieRuleContext | null {
-  const machineSnapshot =
-    getMachineDetailsSnapshot(
-      assetNumber
+  const assetSnapshot =
+    getAssetDetailsSnapshot(
+      assetNumber,
     );
 
-  if (!machineSnapshot) {
+  if (!assetSnapshot) {
     return null;
   }
 
   const {
-    machine,
+    asset,
     workOrders,
     openWorkOrders,
     closedWorkOrders,
     timeSummary,
-  } = machineSnapshot;
+  } = assetSnapshot;
 
   const preventiveMaintenancePlans =
     getMachinePlans(
-      machine.assetNumber
+      asset.assetNumber,
     );
 
   const preventiveMaintenanceExecutions =
     getMachineExecutions(
-      machine.assetNumber
+      asset.assetNumber,
     );
 
   const workOrdersLast7Days =
     getRecentWorkOrders(
       workOrders,
-      7
+      7,
     );
 
   const workOrdersLast30Days =
     getRecentWorkOrders(
       workOrders,
-      30
+      30,
     );
 
   const downtimeFailuresLast30Days =
     getDowntimeFailures(
-      workOrdersLast30Days
+      workOrdersLast30Days,
     );
 
   const availabilityPercent =
     Number.isFinite(
-      machine.availability
+      asset.availability,
     )
-      ? machine.availability
+      ? asset.availability
       : 100;
 
   return {
     generatedAt:
       new Date().toISOString(),
 
+    /*
+     * Asset identity
+     */
+    assetId:
+      asset.id,
+
     assetNumber:
-      machine.assetNumber,
+      asset.assetNumber,
 
+    assetCode:
+      asset.assetCode,
+
+    /*
+     * Legacy compatibility
+     */
     machineCode:
-      machine.machineCode,
+      asset.assetCode,
 
-    machine,
+    /*
+     * Asset is now the source of truth
+     */
+    asset,
 
+    /*
+     * Work Orders
+     */
     workOrders,
 
     openWorkOrders,
 
     closedWorkOrders,
 
+    /*
+     * Preventive Maintenance
+     */
     preventiveMaintenancePlans,
 
     preventiveMaintenanceExecutions,
 
+    /*
+     * Health
+     */
     currentHealthScore:
       calculateBaseHealthScore(
-        availabilityPercent
+        availabilityPercent,
       ),
 
+    /*
+     * Reliability
+     */
     availabilityPercent,
 
     mttrHours:
       Number.isFinite(
-        machine.mttrHours
+        asset.mttrHours,
       )
-        ? machine.mttrHours
+        ? asset.mttrHours
         : 0,
 
     mtbfHours:
       Number.isFinite(
-        machine.mtbfHours
+        asset.mtbfHours,
       )
-        ? machine.mtbfHours
+        ? asset.mtbfHours
         : 0,
 
+    /*
+     * Time metrics
+     */
     totalDowntimeMinutes:
       Number.isFinite(
-        timeSummary.totalDowntimeMinutes
+        timeSummary
+          .totalDowntimeMinutes,
       )
-        ? timeSummary.totalDowntimeMinutes
+        ? timeSummary
+            .totalDowntimeMinutes
         : 0,
 
     averageResponseMinutes:
       Number.isFinite(
-        timeSummary.averageResponseMinutes
+        timeSummary
+          .averageResponseMinutes,
       )
-        ? timeSummary.averageResponseMinutes
+        ? timeSummary
+            .averageResponseMinutes
         : 0,
 
     averageRepairMinutes:
       Number.isFinite(
-        timeSummary.averageRepairMinutes
+        timeSummary
+          .averageRepairMinutes,
       )
-        ? timeSummary.averageRepairMinutes
+        ? timeSummary
+            .averageRepairMinutes
         : 0,
 
+    /*
+     * Failure metrics
+     */
     failuresLast7Days:
       workOrdersLast7Days.length,
 
@@ -277,14 +336,17 @@ export function buildMieRuleContext(
     downtimeFailuresLast30Days:
       downtimeFailuresLast30Days.length,
 
+    /*
+     * PM metrics
+     */
     overduePmCount:
       getOverduePmCount(
-        machine.assetNumber
+        asset.assetNumber,
       ),
 
     duePmCount:
       getDuePmCount(
-        machine.assetNumber
+        asset.assetNumber,
       ),
   };
 }

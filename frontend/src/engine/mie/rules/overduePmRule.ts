@@ -13,48 +13,65 @@ import {
   type MieRuleResult,
 } from "../types";
 
-const configuration: MieRuleConfiguration = {
+const configuration:
+  MieRuleConfiguration = {
   id: "MIE-RULE-002",
 
-  name: "Overdue Preventive Maintenance",
+  name:
+    "Overdue Preventive Maintenance",
 
   description:
     "מזהה טיפולים מונעים שעבר מועד הביצוע שלהם ומחשב את חומרת האיחור.",
 
-  category: "preventive_maintenance",
+  category:
+    "preventive_maintenance",
 
   enabled: true,
 
-  severity: "danger",
+  severity:
+    "danger",
 
   thresholds: {
-    maximumOverdueDays: 14,
-    minimumConfidencePercent: 80,
+    maximumOverdueDays:
+      14,
+
+    minimumConfidencePercent:
+      80,
   },
 
-  healthPenalty: 12,
+  healthPenalty:
+    12,
 
-  recommendationPriority: "urgent",
+  recommendationPriority:
+    "urgent",
 
-  actionType: "schedule_pm",
+  actionType:
+    "schedule_pm",
 
   recommendationTitle:
     "נדרש לבצע טיפול מונע באיחור",
 
   recommendationDescription:
-    "זוהה טיפול מונע שמועד הביצוע שלו עבר. מומלץ לתאם ביצוע, לוודא זמינות כוח אדם וחלפים ולבחון את השפעת האיחור על אמינות המכונה.",
+    "זוהה טיפול מונע שמועד הביצוע שלו עבר. מומלץ לתאם ביצוע, לוודא זמינות כוח אדם וחלפים ולבחון את השפעת האיחור על אמינות הנכס.",
 };
 
 function getDateTime(
-  value: string | null
+  value: string | null,
 ): number | null {
   if (!value) {
     return null;
   }
 
-  const time = new Date(value).getTime();
+  const time =
+    new Date(
+      value,
+    ).getTime();
 
-  if (Number.isNaN(time)) {
+  if (
+    Number.isNaN(
+      time,
+    )
+  ) {
     return null;
   }
 
@@ -62,76 +79,113 @@ function getDateTime(
 }
 
 function getOverdueDays(
-  dueAt: string
+  dueAt: string,
 ): number {
   const dueTime =
-    getDateTime(dueAt);
+    getDateTime(
+      dueAt,
+    );
 
-  if (dueTime === null) {
+  if (
+    dueTime === null
+  ) {
     return 0;
   }
 
   const difference =
-    Date.now() - dueTime;
+    Date.now() -
+    dueTime;
 
-  if (difference <= 0) {
+  if (
+    difference <= 0
+  ) {
     return 0;
   }
 
   return Math.floor(
     difference /
-      (24 * 60 * 60 * 1000)
+      (24 *
+        60 *
+        60 *
+        1000),
   );
 }
 
 function isOverdueExecution(
-  execution: PreventiveMaintenanceExecution
+  execution:
+    PreventiveMaintenanceExecution,
 ): boolean {
   if (
-    execution.status === "completed" ||
-    execution.status === "cancelled"
+    execution.status ===
+      "completed" ||
+    execution.status ===
+      "cancelled"
   ) {
     return false;
   }
 
   if (
-    execution.status === "overdue"
+    execution.status ===
+    "overdue"
   ) {
     return true;
   }
 
-  return getOverdueDays(
-    execution.dueAt
-  ) > 0;
+  return (
+    getOverdueDays(
+      execution.dueAt,
+    ) > 0
+  );
 }
 
 function getOverdueExecutions(
-  context: MieRuleContext
+  context:
+    MieRuleContext,
 ): PreventiveMaintenanceExecution[] {
   return context
     .preventiveMaintenanceExecutions
-    .filter(isOverdueExecution)
-    .sort((first, second) => {
-      const firstDays =
-        getOverdueDays(first.dueAt);
+    .filter(
+      isOverdueExecution,
+    )
+    .sort(
+      (
+        first,
+        second,
+      ) => {
+        const firstDays =
+          getOverdueDays(
+            first.dueAt,
+          );
 
-      const secondDays =
-        getOverdueDays(second.dueAt);
+        const secondDays =
+          getOverdueDays(
+            second.dueAt,
+          );
 
-      return secondDays - firstDays;
-    });
+        return (
+          secondDays -
+          firstDays
+        );
+      },
+    );
 }
 
 function getSeverityByDays(
-  overdueDays: number
-): "warning" | "danger" | "critical" {
+  overdueDays: number,
+):
+  | "warning"
+  | "danger"
+  | "critical" {
   const maximumOverdueDays =
-    configuration.thresholds
-      .maximumOverdueDays ?? 14;
+    configuration
+      .thresholds
+      .maximumOverdueDays ??
+    14;
 
   if (
     overdueDays >=
-    maximumOverdueDays * 2
+    maximumOverdueDays *
+      2
   ) {
     return "critical";
   }
@@ -147,9 +201,12 @@ function getSeverityByDays(
 }
 
 function calculateConfidence(
-  executions: PreventiveMaintenanceExecution[]
+  executions:
+    PreventiveMaintenanceExecution[],
 ): number {
-  if (executions.length === 0) {
+  if (
+    executions.length === 0
+  ) {
     return 100;
   }
 
@@ -158,51 +215,68 @@ function calculateConfidence(
       ...executions.map(
         (execution) =>
           getOverdueDays(
-            execution.dueAt
-          )
-      )
+            execution.dueAt,
+          ),
+      ),
     );
 
-  let confidence = 80;
+  let confidence =
+    80;
 
-  confidence += Math.min(
-    10,
-    executions.length * 3
-  );
+  confidence +=
+    Math.min(
+      10,
+      executions.length *
+        3,
+    );
 
-  confidence += Math.min(
-    10,
-    Math.floor(
-      highestOverdueDays / 7
-    ) * 2
-  );
+  confidence +=
+    Math.min(
+      10,
+      Math.floor(
+        highestOverdueDays /
+          7,
+      ) * 2,
+    );
 
   return Math.max(
     0,
-    Math.min(100, confidence)
+    Math.min(
+      100,
+      confidence,
+    ),
   );
 }
 
 function buildEvidence(
-  executions: PreventiveMaintenanceExecution[]
+  executions:
+    PreventiveMaintenanceExecution[],
 ): MieEvidence[] {
-  const evidence: MieEvidence[] = [
+  const evidence:
+    MieEvidence[] = [
     createMieEvidence({
-      type: "calculated_metric",
+      type:
+        "calculated_metric",
 
       label:
         "מספר טיפולים באיחור",
 
       value:
-        String(executions.length),
+        String(
+          executions.length,
+        ),
 
-      sourceId: null,
-      sourceNumber: null,
+      sourceId:
+        null,
+
+      sourceNumber:
+        null,
 
       occurredAt:
         new Date().toISOString(),
 
-      weight: 1,
+      weight:
+        1,
     }),
   ];
 
@@ -212,83 +286,104 @@ function buildEvidence(
           ...executions.map(
             (execution) =>
               getOverdueDays(
-                execution.dueAt
-              )
-          )
+                execution.dueAt,
+              ),
+          ),
         )
       : 0;
 
   evidence.push(
     createMieEvidence({
-      type: "calculated_metric",
+      type:
+        "calculated_metric",
 
       label:
         "האיחור המרבי",
 
-      value: `${highestOverdueDays} ימים`,
+      value:
+        `${highestOverdueDays} ימים`,
 
-      sourceId: null,
-      sourceNumber: null,
+      sourceId:
+        null,
+
+      sourceNumber:
+        null,
 
       occurredAt:
         new Date().toISOString(),
 
       weight:
         highestOverdueDays >=
-        (configuration.thresholds
-          .maximumOverdueDays ?? 14)
+        (configuration
+          .thresholds
+          .maximumOverdueDays ??
+          14)
           ? 1
           : 0.8,
-    })
+    }),
   );
 
   executions
-    .slice(0, 5)
-    .forEach((execution) => {
-      evidence.push(
-        createMieEvidence({
-          type:
-            "preventive_maintenance",
+    .slice(
+      0,
+      5,
+    )
+    .forEach(
+      (execution) => {
+        evidence.push(
+          createMieEvidence({
+            type:
+              "preventive_maintenance",
 
-          label:
-            execution.planTitle,
+            label:
+              execution.planTitle,
 
-          value: `${getOverdueDays(
-            execution.dueAt
-          )} ימים באיחור`,
+            value:
+              `${getOverdueDays(
+                execution.dueAt,
+              )} ימים באיחור`,
 
-          sourceId:
-            execution.id,
+            sourceId:
+              execution.id,
 
-          sourceNumber:
-            execution.executionNumber,
+            sourceNumber:
+              execution
+                .executionNumber,
 
-          occurredAt:
-            execution.dueAt,
+            occurredAt:
+              execution.dueAt,
 
-          weight:
-            getOverdueDays(
-              execution.dueAt
-            ) >=
-            (configuration.thresholds
-              .maximumOverdueDays ?? 14)
-              ? 1
-              : 0.8,
-        })
-      );
-    });
+            weight:
+              getOverdueDays(
+                execution.dueAt,
+              ) >=
+              (configuration
+                .thresholds
+                .maximumOverdueDays ??
+                14)
+                ? 1
+                : 0.8,
+          }),
+        );
+      },
+    );
 
   return evidence;
 }
 
 function evaluateOverduePm(
-  context: MieRuleContext
+  context:
+    MieRuleContext,
 ): MieRuleResult {
-  if (!configuration.enabled) {
+  if (
+    !configuration.enabled
+  ) {
     return createMieRuleResult({
-      rule: configuration,
+      rule:
+        configuration,
 
-      status: "disabled",
+      status:
+        "disabled",
 
       title:
         "החוק אינו פעיל",
@@ -296,16 +391,19 @@ function evaluateOverduePm(
       description:
         "בדיקת טיפולים מונעים באיחור מושבתת בהגדרות.",
 
-      confidencePercent: 100,
+      confidencePercent:
+        100,
     });
   }
 
   if (
-    context.preventiveMaintenanceExecutions
+    context
+      .preventiveMaintenanceExecutions
       .length === 0
   ) {
     return createMieRuleResult({
-      rule: configuration,
+      rule:
+        configuration,
 
       status:
         "insufficient_data",
@@ -316,22 +414,26 @@ function evaluateOverduePm(
       description:
         "לא קיימים ביצועי טיפול מונע שניתן לבדוק עבור נכס זה.",
 
-      confidencePercent: 100,
+      confidencePercent:
+        100,
     });
   }
 
   const overdueExecutions =
     getOverdueExecutions(
-      context
+      context,
     );
 
   if (
-    overdueExecutions.length === 0
+    overdueExecutions.length ===
+    0
   ) {
     return createMieRuleResult({
-      rule: configuration,
+      rule:
+        configuration,
 
-      status: "passed",
+      status:
+        "passed",
 
       title:
         "אין טיפולים מונעים באיחור",
@@ -339,7 +441,8 @@ function evaluateOverduePm(
       description:
         "כל הטיפולים המונעים נמצאים בטווח הביצוע התקין.",
 
-      confidencePercent: 100,
+      confidencePercent:
+        100,
     });
   }
 
@@ -348,24 +451,24 @@ function evaluateOverduePm(
       ...overdueExecutions.map(
         (execution) =>
           getOverdueDays(
-            execution.dueAt
-          )
-      )
+            execution.dueAt,
+          ),
+      ),
     );
 
   const evidence =
     buildEvidence(
-      overdueExecutions
+      overdueExecutions,
     );
 
   const confidencePercent =
     calculateConfidence(
-      overdueExecutions
+      overdueExecutions,
     );
 
   const highestSeverity =
     getSeverityByDays(
-      highestOverdueDays
+      highestOverdueDays,
     );
 
   const mostOverdueExecution =
@@ -376,21 +479,32 @@ function evaluateOverduePm(
       ruleId:
         configuration.id,
 
+      assetId:
+        context.assetId,
+
       assetNumber:
         context.assetNumber,
 
+      assetCode:
+        context.assetCode,
+
+      /*
+       * Legacy compatibility
+       */
       machineCode:
         context.machineCode,
 
       priority:
         highestSeverity ===
           "critical" ||
-        highestSeverity === "danger"
+        highestSeverity ===
+          "danger"
           ? "urgent"
           : "high",
 
       actionType:
-        configuration.actionType,
+        configuration
+          .actionType,
 
       title:
         configuration
@@ -400,26 +514,31 @@ function evaluateOverduePm(
         configuration
           .recommendationDescription,
 
-      reason: `נמצאו ${overdueExecutions.length} טיפולים באיחור. הטיפול "${mostOverdueExecution.planTitle}" נמצא באיחור של ${highestOverdueDays} ימים.`,
+      reason:
+        `נמצאו ${overdueExecutions.length} טיפולים באיחור. הטיפול "${mostOverdueExecution.planTitle}" נמצא באיחור של ${highestOverdueDays} ימים.`,
 
       confidencePercent,
 
       evidence,
 
       relatedMaintenancePlanId:
-        mostOverdueExecution.planId,
+        mostOverdueExecution
+          .planId,
     });
 
   return {
     ...createMieRuleResult({
-      rule: configuration,
+      rule:
+        configuration,
 
-      status: "triggered",
+      status:
+        "triggered",
 
       title:
         "נמצאו טיפולים מונעים באיחור",
 
-      description: `נמצאו ${overdueExecutions.length} טיפולים שעבר מועד הביצוע שלהם. האיחור המרבי הוא ${highestOverdueDays} ימים.`,
+      description:
+        `נמצאו ${overdueExecutions.length} טיפולים שעבר מועד הביצוע שלהם. האיחור המרבי הוא ${highestOverdueDays} ימים.`,
 
       confidencePercent,
 
@@ -432,15 +551,18 @@ function evaluateOverduePm(
       highestSeverity,
 
     healthPenalty:
-      highestSeverity === "critical"
+      highestSeverity ===
+      "critical"
         ? 20
-        : highestSeverity === "danger"
+        : highestSeverity ===
+          "danger"
           ? 14
           : 8,
   };
 }
 
-export const overduePmRule: MieRule = {
+export const overduePmRule:
+  MieRule = {
   configuration,
 
   evaluate:

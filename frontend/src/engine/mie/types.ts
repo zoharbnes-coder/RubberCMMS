@@ -1,5 +1,11 @@
-import type { Machine } from "../../types/machine";
-import type { WorkOrder } from "../../types/workOrder";
+import type {
+  Asset,
+} from "../../types/asset";
+
+import type {
+  WorkOrder,
+} from "../../types/workOrder";
+
 import type {
   PreventiveMaintenanceExecution,
   PreventiveMaintenancePlan,
@@ -61,6 +67,7 @@ export type MieRecommendationActionType =
 export type MieEvidenceType =
   | "work_order"
   | "preventive_maintenance"
+  | "asset_metric"
   | "machine_metric"
   | "timeline_event"
   | "spare_part"
@@ -71,51 +78,77 @@ export type MieEvidenceType =
 export type MieEvidence = {
   id: string;
 
-  type: MieEvidenceType;
+  type:
+    MieEvidenceType;
 
   label: string;
+
   value: string;
 
-  sourceId: string | null;
-  sourceNumber: string | null;
+  sourceId:
+    string | null;
 
-  occurredAt: string | null;
+  sourceNumber:
+    string | null;
+
+  occurredAt:
+    string | null;
 
   weight: number;
 };
 
 export type MieRuleThresholds = {
-  minimumFailureCount?: number;
-  observationDays?: number;
+  minimumFailureCount?:
+    number;
 
-  minimumDowntimeMinutes?: number;
-  maximumResponseMinutes?: number;
-  maximumRepairMinutes?: number;
+  observationDays?:
+    number;
 
-  minimumAvailabilityPercent?: number;
-  maximumOverdueDays?: number;
+  minimumDowntimeMinutes?:
+    number;
 
-  minimumHealthScore?: number;
-  minimumConfidencePercent?: number;
+  maximumResponseMinutes?:
+    number;
 
-  comparisonDecreasePercent?: number;
+  maximumRepairMinutes?:
+    number;
+
+  minimumAvailabilityPercent?:
+    number;
+
+  maximumOverdueDays?:
+    number;
+
+  minimumHealthScore?:
+    number;
+
+  minimumConfidencePercent?:
+    number;
+
+  comparisonDecreasePercent?:
+    number;
 };
 
 export type MieRuleConfiguration = {
   id: string;
 
   name: string;
+
   description: string;
 
-  category: MieRuleCategory;
+  category:
+    MieRuleCategory;
 
   enabled: boolean;
 
-  severity: MieSeverity;
+  severity:
+    MieSeverity;
 
-  thresholds: MieRuleThresholds;
+  thresholds:
+    MieRuleThresholds;
 
-  healthPenalty: number;
+  healthPenalty:
+    number;
 
   recommendationPriority:
     MieRecommendationPriority;
@@ -123,66 +156,142 @@ export type MieRuleConfiguration = {
   actionType:
     MieRecommendationActionType;
 
-  recommendationTitle: string;
-  recommendationDescription: string;
+  recommendationTitle:
+    string;
+
+  recommendationDescription:
+    string;
 };
 
 export type MieRuleContext = {
   generatedAt: string;
 
+  /*
+   * Asset identity
+   */
+  assetId: string;
+
   assetNumber: string;
+
+  assetCode: string;
+
+  /*
+   * Legacy compatibility
+   *
+   * Existing MIE rules may still use
+   * machineCode during migration.
+   *
+   * It intentionally mirrors assetCode.
+   */
   machineCode: string;
 
-  machine: Machine;
+  /*
+   * Asset is now the source of truth.
+   */
+  asset: Asset;
 
-  workOrders: WorkOrder[];
+  /*
+   * Operational data
+   */
+  workOrders:
+    WorkOrder[];
 
-  openWorkOrders: WorkOrder[];
-  closedWorkOrders: WorkOrder[];
+  openWorkOrders:
+    WorkOrder[];
 
+  closedWorkOrders:
+    WorkOrder[];
+
+  /*
+   * Preventive maintenance
+   */
   preventiveMaintenancePlans:
     PreventiveMaintenancePlan[];
 
   preventiveMaintenanceExecutions:
     PreventiveMaintenanceExecution[];
 
-  currentHealthScore: number;
+  /*
+   * Health
+   */
+  currentHealthScore:
+    number;
 
-  availabilityPercent: number;
-  mttrHours: number;
-  mtbfHours: number;
+  /*
+   * Reliability metrics
+   */
+  availabilityPercent:
+    number;
 
-  totalDowntimeMinutes: number;
-  averageResponseMinutes: number;
-  averageRepairMinutes: number;
+  mttrHours:
+    number;
 
-  failuresLast7Days: number;
-  failuresLast30Days: number;
-  downtimeFailuresLast30Days: number;
+  mtbfHours:
+    number;
 
-  overduePmCount: number;
-  duePmCount: number;
+  /*
+   * Time metrics
+   */
+  totalDowntimeMinutes:
+    number;
+
+  averageResponseMinutes:
+    number;
+
+  averageRepairMinutes:
+    number;
+
+  /*
+   * Failure metrics
+   */
+  failuresLast7Days:
+    number;
+
+  failuresLast30Days:
+    number;
+
+  downtimeFailuresLast30Days:
+    number;
+
+  /*
+   * PM metrics
+   */
+  overduePmCount:
+    number;
+
+  duePmCount:
+    number;
 };
 
 export type MieRuleResult = {
   ruleId: string;
+
   ruleName: string;
 
-  category: MieRuleCategory;
+  category:
+    MieRuleCategory;
 
-  status: MieRuleStatus;
-  severity: MieSeverity;
+  status:
+    MieRuleStatus;
+
+  severity:
+    MieSeverity;
 
   title: string;
+
   description: string;
 
-  healthPenalty: number;
+  healthPenalty:
+    number;
 
-  confidencePercent: number;
+  confidencePercent:
+    number;
 
-  evidence: MieEvidence[];
+  evidence:
+    MieEvidence[];
 
-  recommendation: MieRecommendation | null;
+  recommendation:
+    MieRecommendation | null;
 
   evaluatedAt: string;
 };
@@ -192,20 +301,41 @@ export type MieRecommendation = {
 
   ruleId: string;
 
-  assetNumber: string;
-  machineCode: string;
+  /*
+   * Asset identity
+   */
+  assetId:
+    string | null;
 
-  priority: MieRecommendationPriority;
-  actionType: MieRecommendationActionType;
+  assetNumber:
+    string;
+
+  assetCode:
+    string;
+
+  /*
+   * Legacy compatibility
+   */
+  machineCode:
+    string;
+
+  priority:
+    MieRecommendationPriority;
+
+  actionType:
+    MieRecommendationActionType;
 
   title: string;
+
   description: string;
 
   reason: string;
 
-  confidencePercent: number;
+  confidencePercent:
+    number;
 
-  evidence: MieEvidence[];
+  evidence:
+    MieEvidence[];
 
   createdAt: string;
 
@@ -216,56 +346,94 @@ export type MieRecommendation = {
     | "dismissed"
     | "completed";
 
-  reviewedBy: string | null;
-  reviewedAt: string | null;
+  reviewedBy:
+    string | null;
 
-  relatedWorkOrderId: string | null;
-  relatedMaintenancePlanId: string | null;
+  reviewedAt:
+    string | null;
+
+  relatedWorkOrderId:
+    string | null;
+
+  relatedMaintenancePlanId:
+    string | null;
 };
 
 export type MieRule = {
-  configuration: MieRuleConfiguration;
+  configuration:
+    MieRuleConfiguration;
 
   evaluate: (
-    context: MieRuleContext
+    context:
+      MieRuleContext,
   ) => MieRuleResult;
 };
 
 export type MieEngineSummary = {
   totalRules: number;
 
-  triggeredRules: number;
-  passedRules: number;
+  triggeredRules:
+    number;
 
-  warningRules: number;
-  dangerRules: number;
-  criticalRules: number;
+  passedRules:
+    number;
 
-  totalHealthPenalty: number;
+  warningRules:
+    number;
 
-  highestSeverity: MieSeverity;
+  dangerRules:
+    number;
 
-  recommendationCount: number;
+  criticalRules:
+    number;
 
-  urgentRecommendationCount: number;
+  totalHealthPenalty:
+    number;
+
+  highestSeverity:
+    MieSeverity;
+
+  recommendationCount:
+    number;
+
+  urgentRecommendationCount:
+    number;
 };
 
 export type MieEngineSnapshot = {
   generatedAt: string;
 
+  /*
+   * Asset identity
+   */
+  assetId: string;
+
   assetNumber: string;
+
+  assetCode: string;
+
+  /*
+   * Legacy compatibility
+   */
   machineCode: string;
 
-  baseHealthScore: number;
-  calculatedHealthScore: number;
+  baseHealthScore:
+    number;
 
-  riskLevel: MieRiskLevel;
+  calculatedHealthScore:
+    number;
 
-  results: MieRuleResult[];
+  riskLevel:
+    MieRiskLevel;
 
-  recommendations: MieRecommendation[];
+  results:
+    MieRuleResult[];
 
-  summary: MieEngineSummary;
+  recommendations:
+    MieRecommendation[];
+
+  summary:
+    MieEngineSummary;
 };
 
 export type MieAssetQuestion =
@@ -282,22 +450,31 @@ export type MieAskRequest = {
   id: string;
 
   question: string;
-  questionType: MieAssetQuestion;
 
-  assetNumber: string | null;
-  department: string | null;
+  questionType:
+    MieAssetQuestion;
+
+  assetNumber:
+    string | null;
+
+  department:
+    string | null;
 
   requestedBy: string;
+
   requestedAt: string;
 };
 
 export type MieAskAnswerSection = {
   title: string;
+
   content: string;
 
-  severity: MieSeverity;
+  severity:
+    MieSeverity;
 
-  evidence: MieEvidence[];
+  evidence:
+    MieEvidence[];
 };
 
 export type MieAskAnswer = {
@@ -305,20 +482,29 @@ export type MieAskAnswer = {
 
   answer: string;
 
-  confidencePercent: number;
+  confidencePercent:
+    number;
 
-  sections: MieAskAnswerSection[];
+  sections:
+    MieAskAnswerSection[];
 
-  recommendations: MieRecommendation[];
+  recommendations:
+    MieRecommendation[];
 
   generatedAt: string;
 };
 
 export function createMieEvidence(
-  evidence: Omit<MieEvidence, "id">
+  evidence:
+    Omit<
+      MieEvidence,
+      "id"
+    >,
 ): MieEvidence {
   return {
-    id: crypto.randomUUID(),
+    id:
+      crypto.randomUUID(),
+
     ...evidence,
   };
 }
@@ -327,61 +513,114 @@ export function createMieRecommendation(
   input: {
     ruleId: string;
 
-    assetNumber: string;
-    machineCode: string;
+    assetId?:
+      string | null;
 
-    priority: MieRecommendationPriority;
-    actionType: MieRecommendationActionType;
+    assetNumber:
+      string;
+
+    assetCode?:
+      string;
+
+    /*
+     * Kept temporarily for existing rules.
+     */
+    machineCode:
+      string;
+
+    priority:
+      MieRecommendationPriority;
+
+    actionType:
+      MieRecommendationActionType;
 
     title: string;
-    description: string;
+
+    description:
+      string;
+
     reason: string;
 
-    confidencePercent: number;
+    confidencePercent:
+      number;
 
-    evidence: MieEvidence[];
+    evidence:
+      MieEvidence[];
 
-    relatedWorkOrderId?: string | null;
-    relatedMaintenancePlanId?: string | null;
-  }
+    relatedWorkOrderId?:
+      string | null;
+
+    relatedMaintenancePlanId?:
+      string | null;
+  },
 ): MieRecommendation {
+  const assetCode =
+    input.assetCode ??
+    input.machineCode;
+
   return {
-    id: crypto.randomUUID(),
+    id:
+      crypto.randomUUID(),
 
-    ruleId: input.ruleId,
+    ruleId:
+      input.ruleId,
 
-    assetNumber: input.assetNumber,
-    machineCode: input.machineCode,
+    assetId:
+      input.assetId ??
+      null,
 
-    priority: input.priority,
-    actionType: input.actionType,
+    assetNumber:
+      input.assetNumber,
 
-    title: input.title,
-    description: input.description,
-    reason: input.reason,
+    assetCode,
 
-    confidencePercent: Math.max(
-      0,
-      Math.min(
-        100,
-        Math.round(
-          input.confidencePercent
-        )
-      )
-    ),
+    machineCode:
+      input.machineCode,
 
-    evidence: input.evidence,
+    priority:
+      input.priority,
+
+    actionType:
+      input.actionType,
+
+    title:
+      input.title,
+
+    description:
+      input.description,
+
+    reason:
+      input.reason,
+
+    confidencePercent:
+      Math.max(
+        0,
+        Math.min(
+          100,
+          Math.round(
+            input.confidencePercent,
+          ),
+        ),
+      ),
+
+    evidence:
+      input.evidence,
 
     createdAt:
       new Date().toISOString(),
 
-    status: "new",
+    status:
+      "new",
 
-    reviewedBy: null,
-    reviewedAt: null,
+    reviewedBy:
+      null,
+
+    reviewedAt:
+      null,
 
     relatedWorkOrderId:
-      input.relatedWorkOrderId ?? null,
+      input.relatedWorkOrderId ??
+      null,
 
     relatedMaintenancePlanId:
       input.relatedMaintenancePlanId ??
@@ -391,36 +630,50 @@ export function createMieRecommendation(
 
 export function createMieRuleResult(
   input: {
-    rule: MieRuleConfiguration;
+    rule:
+      MieRuleConfiguration;
 
-    status: MieRuleStatus;
+    status:
+      MieRuleStatus;
 
     title: string;
-    description: string;
 
-    confidencePercent?: number;
+    description:
+      string;
 
-    evidence?: MieEvidence[];
+    confidencePercent?:
+      number;
 
-    recommendation?: MieRecommendation | null;
-  }
+    evidence?:
+      MieEvidence[];
+
+    recommendation?:
+      MieRecommendation | null;
+  },
 ): MieRuleResult {
   const isTriggered =
-    input.status === "triggered";
+    input.status ===
+    "triggered";
 
   return {
-    ruleId: input.rule.id,
-    ruleName: input.rule.name,
+    ruleId:
+      input.rule.id,
+
+    ruleName:
+      input.rule.name,
 
     category:
       input.rule.category,
 
-    status: input.status,
+    status:
+      input.status,
 
     severity:
       input.rule.severity,
 
-    title: input.title,
+    title:
+      input.title,
+
     description:
       input.description,
 
@@ -428,25 +681,29 @@ export function createMieRuleResult(
       isTriggered
         ? Math.max(
             0,
-            input.rule.healthPenalty
+            input.rule.healthPenalty,
           )
         : 0,
 
-    confidencePercent: Math.max(
-      0,
-      Math.min(
-        100,
-        Math.round(
-          input.confidencePercent ?? 100
-        )
-      )
-    ),
+    confidencePercent:
+      Math.max(
+        0,
+        Math.min(
+          100,
+          Math.round(
+            input.confidencePercent ??
+              100,
+          ),
+        ),
+      ),
 
     evidence:
-      input.evidence ?? [],
+      input.evidence ??
+      [],
 
     recommendation:
-      input.recommendation ?? null,
+      input.recommendation ??
+      null,
 
     evaluatedAt:
       new Date().toISOString(),
