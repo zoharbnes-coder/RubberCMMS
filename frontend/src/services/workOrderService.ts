@@ -4,209 +4,509 @@ import type {
   WorkOrder,
 } from "../types/workOrder";
 
-const STORAGE_KEY = "rubbercmms_workorders";
+/*
+ * RubberMIP
+ * Asset-native Work Order Service
+ *
+ * Work Orders are now linked directly
+ * to Asset identity:
+ *
+ * assetId
+ * assetCode
+ * assetNumber
+ * assetName
+ *
+ * Previous Machine-centric Work Orders
+ * are intentionally not migrated.
+ */
 
-function loadWorkOrders(): WorkOrder[] {
-  const data = localStorage.getItem(STORAGE_KEY);
+const STORAGE_KEY =
+  "rubbermip_workorders_v2";
+
+/* -------------------------------- */
+/* Storage                          */
+/* -------------------------------- */
+
+function loadWorkOrders():
+  WorkOrder[] {
+  const data =
+    localStorage.getItem(
+      STORAGE_KEY,
+    );
 
   if (!data) {
     return [];
   }
 
   try {
-    return JSON.parse(data) as WorkOrder[];
+    const parsed =
+      JSON.parse(data);
+
+    if (
+      !Array.isArray(parsed)
+    ) {
+      return [];
+    }
+
+    return parsed as WorkOrder[];
   } catch {
     return [];
   }
 }
 
-function saveWorkOrders(workOrders: WorkOrder[]) {
+function saveWorkOrders(
+  workOrders: WorkOrder[],
+): void {
   localStorage.setItem(
     STORAGE_KEY,
-    JSON.stringify(workOrders)
+    JSON.stringify(
+      workOrders,
+    ),
   );
 }
 
-function generateWorkOrderNumber() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const prefix = `${year}${month}`;
+/* -------------------------------- */
+/* Work Order number                */
+/* -------------------------------- */
 
-  const current = loadWorkOrders();
+function generateWorkOrderNumber():
+  string {
+  const now =
+    new Date();
 
-  const thisMonth = current.filter((workOrder) =>
-    workOrder.workOrderNumber.startsWith(prefix)
-  );
+  const year =
+    now.getFullYear();
 
-  const highestNumber = thisMonth.reduce(
-    (highest, workOrder) => {
-      const runningNumber = Number(
-        workOrder.workOrderNumber.split("-")[1]
-      );
+  const month =
+    String(
+      now.getMonth() + 1,
+    ).padStart(
+      2,
+      "0",
+    );
 
-      return Number.isNaN(runningNumber)
-        ? highest
-        : Math.max(highest, runningNumber);
-    },
-    0
-  );
+  const prefix =
+    `${year}${month}`;
 
-  const nextNumber = String(highestNumber + 1).padStart(4, "0");
+  const current =
+    loadWorkOrders();
+
+  const thisMonth =
+    current.filter(
+      (workOrder) =>
+        workOrder.workOrderNumber.startsWith(
+          `${prefix}-`,
+        ),
+    );
+
+  const highestNumber =
+    thisMonth.reduce(
+      (
+        highest,
+        workOrder,
+      ) => {
+        const parts =
+          workOrder.workOrderNumber.split(
+            "-",
+          );
+
+        const runningNumber =
+          Number(
+            parts[1],
+          );
+
+        if (
+          Number.isNaN(
+            runningNumber,
+          )
+        ) {
+          return highest;
+        }
+
+        return Math.max(
+          highest,
+          runningNumber,
+        );
+      },
+      0,
+    );
+
+  const nextNumber =
+    String(
+      highestNumber + 1,
+    ).padStart(
+      4,
+      "0",
+    );
 
   return `${prefix}-${nextNumber}`;
 }
 
-export function getWorkOrders(): WorkOrder[] {
+/* -------------------------------- */
+/* Read                             */
+/* -------------------------------- */
+
+export function getWorkOrders():
+  WorkOrder[] {
   return loadWorkOrders();
 }
 
 export function getWorkOrderById(
-  workOrderId: string
+  workOrderId: string,
 ): WorkOrder | undefined {
   return loadWorkOrders().find(
-    (workOrder) => workOrder.id === workOrderId
+    (workOrder) =>
+      workOrder.id ===
+      workOrderId,
   );
 }
 
+export function getWorkOrdersByAssetId(
+  assetId: string,
+): WorkOrder[] {
+  return loadWorkOrders()
+    .filter(
+      (workOrder) =>
+        workOrder.assetId ===
+        assetId,
+    )
+    .sort(
+      (
+        first,
+        second,
+      ) =>
+        new Date(
+          second.openedAt,
+        ).getTime() -
+        new Date(
+          first.openedAt,
+        ).getTime(),
+    );
+}
+
+export function getWorkOrdersByAssetCode(
+  assetCode: string,
+): WorkOrder[] {
+  return loadWorkOrders()
+    .filter(
+      (workOrder) =>
+        workOrder.assetCode ===
+        assetCode,
+    )
+    .sort(
+      (
+        first,
+        second,
+      ) =>
+        new Date(
+          second.openedAt,
+        ).getTime() -
+        new Date(
+          first.openedAt,
+        ).getTime(),
+    );
+}
+
+/* -------------------------------- */
+/* Create                           */
+/* -------------------------------- */
+
 export function createWorkOrder(
-  input: CreateWorkOrderInput
+  input:
+    CreateWorkOrderInput,
 ): WorkOrder {
-  const workOrders = loadWorkOrders();
+  const workOrders =
+    loadWorkOrders();
 
-  const alreadyOpen = workOrders.some(
-    (workOrder) =>
-      workOrder.machineCode === input.machineCode &&
-      workOrder.status !== "closed"
-  );
+  /*
+   * Duplicate detection is now based
+   * on the immutable Asset ID.
+   */
+  const alreadyOpen =
+    workOrders.some(
+      (workOrder) =>
+        workOrder.assetId ===
+          input.assetId &&
+        workOrder.status !==
+          "closed",
+    );
 
-  const newWorkOrder: WorkOrder = {
-    id: crypto.randomUUID(),
-    workOrderNumber: generateWorkOrderNumber(),
+  const timestamp =
+    new Date().toISOString();
 
-    machineCode: input.machineCode,
-    machineDisplayNumber: input.machineDisplayNumber,
-    machineName: input.machineName,
-    department: input.department,
+  const newWorkOrder:
+    WorkOrder = {
+    id:
+      crypto.randomUUID(),
 
-    type: input.type,
-    priority: input.priority,
-    status: "open",
-    isDowntime: input.isDowntime,
+    workOrderNumber:
+      generateWorkOrderNumber(),
 
-    faultDescription: input.faultDescription,
-    repairDescription: "",
+    /*
+     * Asset identity
+     */
+    assetId:
+      input.assetId,
 
-    openedBy: input.openedBy,
-    openedAt: new Date().toISOString(),
+    assetCode:
+      input.assetCode,
 
-    takenBy: null,
-    takenAt: null,
+    assetNumber:
+      input.assetNumber,
 
-    closedBy: null,
-    closedAt: null,
+    assetName:
+      input.assetName,
 
-    replacedParts: [],
+    /*
+     * Organizational context
+     */
+    department:
+      input.department,
 
-    openedWhileAnotherCallWasOpen: alreadyOpen,
+    /*
+     * Classification
+     */
+    type:
+      input.type,
+
+    status:
+      "open",
+
+    priority:
+      input.priority,
+
+    isDowntime:
+      input.isDowntime,
+
+    /*
+     * Description
+     */
+    faultDescription:
+      input.faultDescription.trim(),
+
+    repairDescription:
+      "",
+
+    /*
+     * Opening
+     */
+    openedBy:
+      input.openedBy,
+
+    openedAt:
+      timestamp,
+
+    /*
+     * Technician response
+     */
+    takenBy:
+      null,
+
+    takenAt:
+      null,
+
+    /*
+     * Closure
+     */
+    closedBy:
+      null,
+
+    closedAt:
+      null,
+
+    /*
+     * Parts
+     */
+    replacedParts:
+      [],
+
+    /*
+     * Duplicate tracking
+     */
+    openedWhileAnotherCallWasOpen:
+      alreadyOpen,
   };
 
-  workOrders.push(newWorkOrder);
-  saveWorkOrders(workOrders);
+  workOrders.push(
+    newWorkOrder,
+  );
+
+  saveWorkOrders(
+    workOrders,
+  );
 
   return newWorkOrder;
 }
 
+/* -------------------------------- */
+/* Start                            */
+/* -------------------------------- */
+
 export function startWorkOrder(
   workOrderId: string,
-  username: string
+  username: string,
 ): WorkOrder {
-  const workOrders = loadWorkOrders();
+  const workOrders =
+    loadWorkOrders();
 
-  const workOrder = workOrders.find(
-    (item) => item.id === workOrderId
-  );
+  const workOrder =
+    workOrders.find(
+      (item) =>
+        item.id ===
+        workOrderId,
+    );
 
   if (!workOrder) {
-    throw new Error("הקריאה לא נמצאה.");
+    throw new Error(
+      "הקריאה לא נמצאה.",
+    );
   }
 
-  if (workOrder.status === "closed") {
-    throw new Error("לא ניתן להתחיל טיפול בקריאה סגורה.");
+  if (
+    workOrder.status ===
+    "closed"
+  ) {
+    throw new Error(
+      "לא ניתן להתחיל טיפול בקריאה סגורה.",
+    );
   }
 
-  if (!workOrder.takenAt) {
-    workOrder.takenAt = new Date().toISOString();
-    workOrder.takenBy = username;
+  if (
+    !workOrder.takenAt
+  ) {
+    workOrder.takenAt =
+      new Date().toISOString();
+
+    workOrder.takenBy =
+      username;
   }
 
-  workOrder.status = "open";
+  workOrder.status =
+    "open";
 
-  saveWorkOrders(workOrders);
+  saveWorkOrders(
+    workOrders,
+  );
 
   return workOrder;
 }
+
+/* -------------------------------- */
+/* Pause                            */
+/* -------------------------------- */
 
 export function pauseWorkOrder(
-  workOrderId: string
+  workOrderId: string,
 ): WorkOrder {
-  const workOrders = loadWorkOrders();
+  const workOrders =
+    loadWorkOrders();
 
-  const workOrder = workOrders.find(
-    (item) => item.id === workOrderId
-  );
+  const workOrder =
+    workOrders.find(
+      (item) =>
+        item.id ===
+        workOrderId,
+    );
 
   if (!workOrder) {
-    throw new Error("הקריאה לא נמצאה.");
+    throw new Error(
+      "הקריאה לא נמצאה.",
+    );
   }
 
-  if (workOrder.status === "closed") {
-    throw new Error("לא ניתן להשהות קריאה סגורה.");
+  if (
+    workOrder.status ===
+    "closed"
+  ) {
+    throw new Error(
+      "לא ניתן להשהות קריאה סגורה.",
+    );
   }
 
-  workOrder.status = "paused";
+  workOrder.status =
+    "paused";
 
-  saveWorkOrders(workOrders);
+  saveWorkOrders(
+    workOrders,
+  );
 
   return workOrder;
 }
+
+/* -------------------------------- */
+/* Close                            */
+/* -------------------------------- */
 
 type CloseWorkOrderInput = {
   workOrderId: string;
+
   username: string;
-  repairDescription: string;
-  replacedParts: ReplacedPart[];
+
+  repairDescription:
+    string;
+
+  replacedParts:
+    ReplacedPart[];
 };
 
 export function closeWorkOrder(
-  input: CloseWorkOrderInput
+  input:
+    CloseWorkOrderInput,
 ): WorkOrder {
-  const workOrders = loadWorkOrders();
+  const workOrders =
+    loadWorkOrders();
 
-  const workOrder = workOrders.find(
-    (item) => item.id === input.workOrderId
-  );
+  const workOrder =
+    workOrders.find(
+      (item) =>
+        item.id ===
+        input.workOrderId,
+    );
 
   if (!workOrder) {
-    throw new Error("הקריאה לא נמצאה.");
+    throw new Error(
+      "הקריאה לא נמצאה.",
+    );
   }
 
-  if (!input.repairDescription.trim()) {
-    throw new Error("תיאור הטיפול הוא שדה חובה.");
-  }
-
-  if (workOrder.status === "closed") {
-    throw new Error("הקריאה כבר סגורה.");
-  }
-
-  workOrder.status = "closed";
-  workOrder.repairDescription =
+  const repairDescription =
     input.repairDescription.trim();
-  workOrder.closedBy = input.username;
-  workOrder.closedAt = new Date().toISOString();
-  workOrder.replacedParts = input.replacedParts;
 
-  saveWorkOrders(workOrders);
+  if (
+    !repairDescription
+  ) {
+    throw new Error(
+      "תיאור הטיפול הוא שדה חובה.",
+    );
+  }
+
+  if (
+    workOrder.status ===
+    "closed"
+  ) {
+    throw new Error(
+      "הקריאה כבר סגורה.",
+    );
+  }
+
+  workOrder.status =
+    "closed";
+
+  workOrder.repairDescription =
+    repairDescription;
+
+  workOrder.closedBy =
+    input.username;
+
+  workOrder.closedAt =
+    new Date().toISOString();
+
+  workOrder.replacedParts =
+    input.replacedParts;
+
+  saveWorkOrders(
+    workOrders,
+  );
 
   return workOrder;
 }

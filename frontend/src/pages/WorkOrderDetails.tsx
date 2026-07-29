@@ -8,33 +8,53 @@ import {
   Divider,
   Typography,
 } from "@mui/material";
-import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {
+  useMemo,
+  useState,
+} from "react";
+import {
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 import CloseWorkOrderForm from "../components/workorders/CloseWorkOrderForm";
 import WorkOrderActions from "../components/workorders/WorkOrderActions";
-import type { AppUser } from "../data/users";
+
+import type {
+  AppUser,
+} from "../data/users";
+
 import {
   getWorkOrderDetailsSnapshot,
 } from "../services/workOrderDetailsService";
+
 import type {
   WorkOrder,
   WorkOrderPriority,
   WorkOrderStatus,
   WorkOrderType,
 } from "../types/workOrder";
-import { formatMinutes } from "../utils/workOrderMetrics";
+
+import {
+  formatMinutes,
+} from "../utils/workOrderMetrics";
 
 type WorkOrderDetailsProps = {
   currentUser: AppUser;
 };
 
-function getStatusLabel(status: WorkOrderStatus) {
-  if (status === "paused") {
+function getStatusLabel(
+  status: WorkOrderStatus,
+) {
+  if (
+    status === "paused"
+  ) {
     return "מושהה";
   }
 
-  if (status === "closed") {
+  if (
+    status === "closed"
+  ) {
     return "סגור";
   }
 
@@ -42,13 +62,20 @@ function getStatusLabel(status: WorkOrderStatus) {
 }
 
 function getStatusColor(
-  status: WorkOrderStatus
-): "info" | "warning" | "success" {
-  if (status === "paused") {
+  status: WorkOrderStatus,
+):
+  | "info"
+  | "warning"
+  | "success" {
+  if (
+    status === "paused"
+  ) {
     return "warning";
   }
 
-  if (status === "closed") {
+  if (
+    status === "closed"
+  ) {
     return "success";
   }
 
@@ -56,13 +83,18 @@ function getStatusColor(
 }
 
 function getPriorityLabel(
-  priority: WorkOrderPriority
+  priority:
+    WorkOrderPriority,
 ) {
-  if (priority === "high") {
+  if (
+    priority === "high"
+  ) {
     return "גבוהה";
   }
 
-  if (priority === "low") {
+  if (
+    priority === "low"
+  ) {
     return "נמוכה";
   }
 
@@ -70,49 +102,71 @@ function getPriorityLabel(
 }
 
 function getPriorityColor(
-  priority: WorkOrderPriority
+  priority:
+    WorkOrderPriority,
 ) {
-  if (priority === "high") {
+  if (
+    priority === "high"
+  ) {
     return "#DC2626";
   }
 
-  if (priority === "low") {
+  if (
+    priority === "low"
+  ) {
     return "#16A34A";
   }
 
   return "#F59E0B";
 }
 
-function getTypeLabel(type: WorkOrderType) {
-  if (type === "preventive") {
+function getTypeLabel(
+  type: WorkOrderType,
+) {
+  if (
+    type === "preventive"
+  ) {
     return "טיפול מונע";
   }
 
-  if (type === "safety") {
+  if (
+    type === "safety"
+  ) {
     return "בטיחות";
   }
 
-  if (type === "improvement") {
+  if (
+    type === "improvement"
+  ) {
     return "שיפור";
   }
 
   return "תקלה";
 }
 
-function formatDate(value: string | null) {
+function formatDate(
+  value: string | null,
+) {
   if (!value) {
     return "-";
   }
 
-  return new Intl.DateTimeFormat("he-IL", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    "he-IL",
+    {
+      dateStyle: "short",
+      timeStyle: "short",
+    },
+  ).format(
+    new Date(value),
+  );
 }
 
 type MetricCardProps = {
   label: string;
+
   value: string;
+
   color?: string;
 };
 
@@ -125,6 +179,7 @@ function MetricCard({
     <Card
       sx={{
         borderRadius: 4,
+
         boxShadow:
           "0 6px 18px rgba(15,23,42,0.07)",
       }}
@@ -133,8 +188,11 @@ function MetricCard({
         <Typography
           component="div"
           sx={{
-            color: "text.secondary",
+            color:
+              "text.secondary",
+
             fontSize: 13,
+
             mb: 0.5,
           }}
         >
@@ -145,7 +203,9 @@ function MetricCard({
           component="div"
           sx={{
             fontWeight: 900,
+
             fontSize: 22,
+
             color,
           }}
         >
@@ -159,36 +219,53 @@ function MetricCard({
 export default function WorkOrderDetails({
   currentUser,
 }: WorkOrderDetailsProps) {
-  const { workOrderId } = useParams<{
+  const {
+    workOrderId,
+  } = useParams<{
     workOrderId: string;
   }>();
 
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const initialSnapshot = useMemo(
-    () =>
-      workOrderId
-        ? getWorkOrderDetailsSnapshot(
-            decodeURIComponent(workOrderId)
-          )
-        : null,
-    [workOrderId]
-  );
-
-  const [workOrder, setWorkOrder] =
-    useState<WorkOrder | null>(
-      initialSnapshot?.workOrder ?? null
+  const initialSnapshot =
+    useMemo(
+      () =>
+        workOrderId
+          ? getWorkOrderDetailsSnapshot(
+              decodeURIComponent(
+                workOrderId,
+              ),
+            )
+          : null,
+      [workOrderId],
     );
 
-  const [showCloseForm, setShowCloseForm] =
+  const [
+    workOrder,
+    setWorkOrder,
+  ] =
+    useState<WorkOrder | null>(
+      initialSnapshot?.workOrder ??
+        null,
+    );
+
+  const [
+    showCloseForm,
+    setShowCloseForm,
+  ] =
     useState(false);
 
-  const snapshot = workOrder
-    ? getWorkOrderDetailsSnapshot(workOrder.id)
-    : null;
+  const snapshot =
+    workOrder
+      ? getWorkOrderDetailsSnapshot(
+          workOrder.id,
+        )
+      : null;
 
   function handleUpdated(
-    updatedWorkOrder: WorkOrder
+    updatedWorkOrder:
+      WorkOrder,
   ) {
     setWorkOrder({
       ...updatedWorkOrder,
@@ -196,25 +273,40 @@ export default function WorkOrderDetails({
   }
 
   function handleClosed(
-    updatedWorkOrder: WorkOrder
+    updatedWorkOrder:
+      WorkOrder,
   ) {
     setWorkOrder({
       ...updatedWorkOrder,
     });
 
-    setShowCloseForm(false);
+    setShowCloseForm(
+      false,
+    );
   }
 
-  if (!snapshot || !workOrder) {
+  if (
+    !snapshot ||
+    !workOrder
+  ) {
     return (
       <Box dir="rtl">
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert
+          severity="error"
+          sx={{
+            mb: 3,
+          }}
+        >
           הקריאה לא נמצאה.
         </Alert>
 
         <Button
           variant="contained"
-          onClick={() => navigate("/workorders")}
+          onClick={() =>
+            navigate(
+              "/workorders",
+            )
+          }
           sx={{
             fontWeight: 900,
           }}
@@ -226,21 +318,30 @@ export default function WorkOrderDetails({
   }
 
   const priorityColor =
-    getPriorityColor(workOrder.priority);
+    getPriorityColor(
+      workOrder.priority,
+    );
 
   return (
     <Box dir="rtl">
       <Box
         sx={{
           display: "flex",
+
           flexWrap: "wrap",
+
           gap: 1.5,
+
           mb: 3,
         }}
       >
         <Button
           variant="outlined"
-          onClick={() => navigate("/workorders")}
+          onClick={() =>
+            navigate(
+              "/workorders",
+            )
+          }
           sx={{
             fontWeight: 900,
           }}
@@ -253,23 +354,27 @@ export default function WorkOrderDetails({
           onClick={() =>
             navigate(
               `/machines/${encodeURIComponent(
-                workOrder.machineDisplayNumber
-              )}`
+                workOrder.assetNumber,
+              )}`,
             )
           }
           sx={{
             fontWeight: 900,
           }}
         >
-          פתח את המכונה
+          פתח את הנכס
         </Button>
       </Box>
 
       <Card
         sx={{
           borderRadius: 5,
+
           mb: 3,
-          borderRight: `8px solid ${priorityColor}`,
+
+          borderRight:
+            `8px solid ${priorityColor}`,
+
           boxShadow:
             "0 10px 30px rgba(15,23,42,0.10)",
         }}
@@ -285,15 +390,26 @@ export default function WorkOrderDetails({
           <Box
             sx={{
               display: "flex",
-              justifyContent: "space-between",
+
+              justifyContent:
+                "space-between",
+
               alignItems: {
-                xs: "flex-start",
-                md: "center",
+                xs:
+                  "flex-start",
+
+                md:
+                  "center",
               },
+
               flexDirection: {
-                xs: "column",
-                md: "row",
+                xs:
+                  "column",
+
+                md:
+                  "row",
               },
+
               gap: 2,
             }}
           >
@@ -302,70 +418,99 @@ export default function WorkOrderDetails({
                 component="h1"
                 variant="h4"
                 sx={{
-                  fontWeight: 900,
+                  fontWeight:
+                    900,
+
                   mb: 0.5,
                 }}
               >
-                קריאה {workOrder.workOrderNumber}
+                קריאה{" "}
+                {
+                  workOrder.workOrderNumber
+                }
               </Typography>
 
               <Typography
                 component="div"
                 sx={{
-                  fontWeight: 900,
-                  fontSize: 18,
+                  fontWeight:
+                    900,
+
+                  fontSize:
+                    18,
+
                   mb: 0.5,
                 }}
               >
-                {workOrder.machineDisplayNumber} -{" "}
-                {workOrder.machineName}
+                {
+                  workOrder.assetNumber
+                }{" "}
+                -{" "}
+                {
+                  workOrder.assetName
+                }
               </Typography>
 
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
+                  color:
+                    "text.secondary",
                 }}
               >
-                {workOrder.department}
+                {
+                  workOrder.department
+                }
               </Typography>
             </Box>
 
             <Box
               sx={{
                 display: "flex",
-                flexWrap: "wrap",
+
+                flexWrap:
+                  "wrap",
+
                 gap: 1,
               }}
             >
               <Chip
                 label={getStatusLabel(
-                  workOrder.status
+                  workOrder.status,
                 )}
                 color={getStatusColor(
-                  workOrder.status
+                  workOrder.status,
                 )}
                 sx={{
-                  fontWeight: 900,
+                  fontWeight:
+                    900,
                 }}
               />
 
               <Chip
                 label={getPriorityLabel(
-                  workOrder.priority
+                  workOrder.priority,
                 )}
                 sx={{
-                  bgcolor: priorityColor,
-                  color: "white",
-                  fontWeight: 900,
+                  bgcolor:
+                    priorityColor,
+
+                  color:
+                    "white",
+
+                  fontWeight:
+                    900,
                 }}
               />
 
               <Chip
-                label={getTypeLabel(workOrder.type)}
+                label={getTypeLabel(
+                  workOrder.type,
+                )}
                 variant="outlined"
                 sx={{
-                  fontWeight: 900,
+                  fontWeight:
+                    900,
                 }}
               />
 
@@ -374,7 +519,8 @@ export default function WorkOrderDetails({
                   label="משביתה"
                   color="error"
                   sx={{
-                    fontWeight: 900,
+                    fontWeight:
+                      900,
                   }}
                 />
               )}
@@ -386,12 +532,19 @@ export default function WorkOrderDetails({
       <Box
         sx={{
           display: "grid",
+
           gridTemplateColumns: {
             xs: "1fr",
-            sm: "repeat(2, minmax(0, 1fr))",
-            lg: "repeat(4, minmax(0, 1fr))",
+
+            sm:
+              "repeat(2, minmax(0, 1fr))",
+
+            lg:
+              "repeat(4, minmax(0, 1fr))",
           },
+
           gap: 2,
+
           mb: 3,
         }}
       >
@@ -402,21 +555,23 @@ export default function WorkOrderDetails({
               : "זמן פתוח"
           }
           value={formatMinutes(
-            snapshot.openTimeMinutes
+            snapshot.openTimeMinutes,
           )}
         />
 
         <MetricCard
           label="זמן תגובה"
           value={
-            snapshot.responseTimeMinutes === null
+            snapshot.responseTimeMinutes ===
+            null
               ? "טרם נלקחה לטיפול"
               : formatMinutes(
-                  snapshot.responseTimeMinutes
+                  snapshot.responseTimeMinutes,
                 )
           }
           color={
-            snapshot.responseTimeMinutes === null
+            snapshot.responseTimeMinutes ===
+            null
               ? "#64748B"
               : "#2563EB"
           }
@@ -425,14 +580,16 @@ export default function WorkOrderDetails({
         <MetricCard
           label="זמן טיפול"
           value={
-            snapshot.repairTimeMinutes === null
+            snapshot.repairTimeMinutes ===
+            null
               ? "הטיפול טרם התחיל"
               : formatMinutes(
-                  snapshot.repairTimeMinutes
+                  snapshot.repairTimeMinutes,
                 )
           }
           color={
-            snapshot.repairTimeMinutes === null
+            snapshot.repairTimeMinutes ===
+            null
               ? "#64748B"
               : "#7C3AED"
           }
@@ -441,14 +598,16 @@ export default function WorkOrderDetails({
         <MetricCard
           label="זמן השבתה"
           value={
-            snapshot.downtimeMinutes === null
+            snapshot.downtimeMinutes ===
+            null
               ? "לא משביתה"
               : formatMinutes(
-                  snapshot.downtimeMinutes
+                  snapshot.downtimeMinutes,
                 )
           }
           color={
-            snapshot.downtimeMinutes === null
+            snapshot.downtimeMinutes ===
+            null
               ? "#16A34A"
               : "#DC2626"
           }
@@ -458,7 +617,9 @@ export default function WorkOrderDetails({
       <Card
         sx={{
           borderRadius: 5,
+
           mb: 3,
+
           boxShadow:
             "0 8px 24px rgba(15,23,42,0.08)",
         }}
@@ -468,7 +629,9 @@ export default function WorkOrderDetails({
             component="h2"
             variant="h6"
             sx={{
-              fontWeight: 900,
+              fontWeight:
+                900,
+
               mb: 2,
             }}
           >
@@ -478,11 +641,18 @@ export default function WorkOrderDetails({
           <Box
             sx={{
               display: "grid",
+
               gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, minmax(0, 1fr))",
-                lg: "repeat(4, minmax(0, 1fr))",
+                xs:
+                  "1fr",
+
+                sm:
+                  "repeat(2, minmax(0, 1fr))",
+
+                lg:
+                  "repeat(4, minmax(0, 1fr))",
               },
+
               gap: 2,
             }}
           >
@@ -490,8 +660,11 @@ export default function WorkOrderDetails({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 מספר דוח
@@ -499,9 +672,14 @@ export default function WorkOrderDetails({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {workOrder.workOrderNumber}
+                {
+                  workOrder.workOrderNumber
+                }
               </Typography>
             </Box>
 
@@ -509,8 +687,11 @@ export default function WorkOrderDetails({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 נפתחה בתאריך
@@ -518,9 +699,14 @@ export default function WorkOrderDetails({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {formatDate(workOrder.openedAt)}
+                {formatDate(
+                  workOrder.openedAt,
+                )}
               </Typography>
             </Box>
 
@@ -528,8 +714,11 @@ export default function WorkOrderDetails({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 נפתחה על ידי
@@ -537,28 +726,14 @@ export default function WorkOrderDetails({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
-              >
-                {workOrder.openedBy}
-              </Typography>
-            </Box>
-
-            <Box>
-              <Typography
-                component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  fontWeight:
+                    900,
                 }}
               >
-                קוד מכונה
-              </Typography>
-
-              <Typography
-                component="div"
-                sx={{ fontWeight: 900 }}
-              >
-                {workOrder.machineCode}
+                {
+                  workOrder.openedBy
+                }
               </Typography>
             </Box>
 
@@ -566,8 +741,38 @@ export default function WorkOrderDetails({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
+                }}
+              >
+                קוד נכס
+              </Typography>
+
+              <Typography
+                component="div"
+                sx={{
+                  fontWeight:
+                    900,
+                }}
+              >
+                {
+                  workOrder.assetCode
+                }
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography
+                component="div"
+                sx={{
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 תחילת טיפול
@@ -575,9 +780,14 @@ export default function WorkOrderDetails({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {formatDate(workOrder.takenAt)}
+                {formatDate(
+                  workOrder.takenAt,
+                )}
               </Typography>
             </Box>
 
@@ -585,8 +795,11 @@ export default function WorkOrderDetails({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 מטפל
@@ -594,9 +807,15 @@ export default function WorkOrderDetails({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {workOrder.takenBy ?? "-"}
+                {
+                  workOrder.takenBy ??
+                  "-"
+                }
               </Typography>
             </Box>
 
@@ -604,8 +823,11 @@ export default function WorkOrderDetails({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 מועד סגירה
@@ -613,9 +835,14 @@ export default function WorkOrderDetails({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {formatDate(workOrder.closedAt)}
+                {formatDate(
+                  workOrder.closedAt,
+                )}
               </Typography>
             </Box>
 
@@ -623,8 +850,11 @@ export default function WorkOrderDetails({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 נסגרה על ידי
@@ -632,19 +862,31 @@ export default function WorkOrderDetails({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {workOrder.closedBy ?? "-"}
+                {
+                  workOrder.closedBy ??
+                  "-"
+                }
               </Typography>
             </Box>
           </Box>
 
-          <Divider sx={{ my: 3 }} />
+          <Divider
+            sx={{
+              my: 3,
+            }}
+          />
 
           <Typography
             component="h3"
             sx={{
-              fontWeight: 900,
+              fontWeight:
+                900,
+
               mb: 1,
             }}
           >
@@ -654,19 +896,26 @@ export default function WorkOrderDetails({
           <Typography
             component="p"
             sx={{
-              whiteSpace: "pre-wrap",
+              whiteSpace:
+                "pre-wrap",
             }}
           >
-            {workOrder.faultDescription}
+            {
+              workOrder.faultDescription
+            }
           </Typography>
         </CardContent>
       </Card>
 
-      {workOrder.status === "closed" && (
+      {workOrder.status ===
+        "closed" && (
         <Card
           sx={{
-            borderRadius: 5,
+            borderRadius:
+              5,
+
             mb: 3,
+
             boxShadow:
               "0 8px 24px rgba(15,23,42,0.08)",
           }}
@@ -676,7 +925,9 @@ export default function WorkOrderDetails({
               component="h2"
               variant="h6"
               sx={{
-                fontWeight: 900,
+                fontWeight:
+                  900,
+
                 mb: 2,
               }}
             >
@@ -686,7 +937,9 @@ export default function WorkOrderDetails({
             <Typography
               component="p"
               sx={{
-                whiteSpace: "pre-wrap",
+                whiteSpace:
+                  "pre-wrap",
+
                 mb: 3,
               }}
             >
@@ -697,18 +950,22 @@ export default function WorkOrderDetails({
             <Typography
               component="h3"
               sx={{
-                fontWeight: 900,
+                fontWeight:
+                  900,
+
                 mb: 1.5,
               }}
             >
               חלקים שהוחלפו
             </Typography>
 
-            {workOrder.replacedParts.length === 0 ? (
+            {workOrder.replacedParts.length ===
+            0 ? (
               <Typography
                 component="p"
                 sx={{
-                  color: "text.secondary",
+                  color:
+                    "text.secondary",
                 }}
               >
                 לא נרשמו חלקים שהוחלפו.
@@ -716,18 +973,27 @@ export default function WorkOrderDetails({
             ) : (
               <Box
                 sx={{
-                  display: "grid",
+                  display:
+                    "grid",
+
                   gap: 1.5,
                 }}
               >
                 {workOrder.replacedParts.map(
                   (part) => (
                     <Box
-                      key={part.id}
+                      key={
+                        part.id
+                      }
                       sx={{
                         p: 2,
-                        borderRadius: 3,
-                        bgcolor: "#F8FAFC",
+
+                        borderRadius:
+                          3,
+
+                        bgcolor:
+                          "#F8FAFC",
+
                         border:
                           "1px solid #E2E8F0",
                       }}
@@ -735,24 +1001,36 @@ export default function WorkOrderDetails({
                       <Typography
                         component="div"
                         sx={{
-                          fontWeight: 900,
+                          fontWeight:
+                            900,
                         }}
                       >
-                        {part.itemCode} -{" "}
-                        {part.description}
+                        {
+                          part.itemCode
+                        }{" "}
+                        -{" "}
+                        {
+                          part.description
+                        }
                       </Typography>
 
                       <Typography
                         component="div"
                         sx={{
-                          color: "text.secondary",
-                          fontSize: 13,
+                          color:
+                            "text.secondary",
+
+                          fontSize:
+                            13,
                         }}
                       >
-                        כמות: {part.quantity}
+                        כמות:{" "}
+                        {
+                          part.quantity
+                        }
                       </Typography>
                     </Box>
-                  )
+                  ),
                 )}
               </Box>
             )}
@@ -763,6 +1041,7 @@ export default function WorkOrderDetails({
       <Card
         sx={{
           borderRadius: 5,
+
           boxShadow:
             "0 8px 24px rgba(15,23,42,0.08)",
         }}
@@ -772,7 +1051,9 @@ export default function WorkOrderDetails({
             component="h2"
             variant="h6"
             sx={{
-              fontWeight: 900,
+              fontWeight:
+                900,
+
               mb: 2,
             }}
           >
@@ -780,22 +1061,39 @@ export default function WorkOrderDetails({
           </Typography>
 
           <WorkOrderActions
-            workOrder={workOrder}
-            currentUser={currentUser}
-            onUpdated={handleUpdated}
+            workOrder={
+              workOrder
+            }
+            currentUser={
+              currentUser
+            }
+            onUpdated={
+              handleUpdated
+            }
             onRequestClose={() =>
-              setShowCloseForm(true)
+              setShowCloseForm(
+                true,
+              )
             }
           />
 
           {showCloseForm &&
-            workOrder.status !== "closed" && (
+            workOrder.status !==
+              "closed" && (
               <CloseWorkOrderForm
-                workOrder={workOrder}
-                currentUser={currentUser}
-                onClosed={handleClosed}
+                workOrder={
+                  workOrder
+                }
+                currentUser={
+                  currentUser
+                }
+                onClosed={
+                  handleClosed
+                }
                 onCancel={() =>
-                  setShowCloseForm(false)
+                  setShowCloseForm(
+                    false,
+                  )
                 }
               />
             )}

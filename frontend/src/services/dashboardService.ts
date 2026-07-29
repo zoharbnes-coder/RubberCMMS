@@ -1,44 +1,91 @@
-import { machines } from "../data/machines";
-import { getWorkOrders } from "./workOrderService";
+import {
+  getLiveAssets,
+} from "./assetService";
+
+import {
+  getWorkOrders,
+} from "./workOrderService";
+
+import type {
+  AssetStatus,
+} from "../types/asset";
+
 import type {
   WorkOrder,
   WorkOrderPriority,
 } from "../types/workOrder";
 
-export type MachineLiveStatus =
-  | "running"
-  | "warning"
-  | "alarm";
+/*
+ * RubberMIP
+ * Asset-native Dashboard Service
+ *
+ * No Machine legacy fields are used here.
+ *
+ * Equipment identity:
+ *
+ * assetId
+ * assetCode
+ * assetNumber
+ * assetName
+ */
 
 export type DashboardOpenCall = {
   id: string;
+
   workOrderNumber: string;
-  machineCode: string;
-  machineDisplayNumber: string;
-  machineName: string;
+
+  assetId: string;
+
+  assetCode: string;
+
+  assetNumber: string;
+
+  assetName: string;
+
   department: string;
+
   faultDescription: string;
-  priority: WorkOrderPriority;
+
+  priority:
+    WorkOrderPriority;
+
   isDowntime: boolean;
+
   openedAt: string;
+
   openMinutes: number;
 };
 
-export type DashboardDowntimeMachine = {
-  machineCode: string;
-  machineDisplayNumber: string;
-  machineName: string;
+export type DashboardDowntimeAsset = {
+  assetId: string;
+
+  assetCode: string;
+
+  assetNumber: string;
+
+  assetName: string;
+
   department: string;
+
   downtimeMinutes: number;
 };
 
-export type DashboardMachineStatus = {
-  machineCode: string;
-  machineDisplayNumber: string;
-  machineName: string;
+export type DashboardAssetStatus = {
+  assetId: string;
+
+  assetCode: string;
+
+  assetNumber: string;
+
+  assetName: string;
+
   department: string;
-  status: MachineLiveStatus;
+
+  status:
+    AssetStatus;
+
   openWorkOrders: number;
+
   downtimeWorkOrders: number;
 };
 
@@ -46,349 +93,647 @@ export type DashboardSnapshot = {
   generatedAt: string;
 
   openWorkOrders: number;
+
   pausedWorkOrders: number;
-  downtimeMachines: number;
+
+  downtimeAssets: number;
+
   closedToday: number;
 
   availabilityToday: number;
+
   downtimeMinutesToday: number;
 
-  urgentOpenCalls: DashboardOpenCall[];
-  topDowntimeMachines: DashboardDowntimeMachine[];
-  machineStatuses: DashboardMachineStatus[];
+  urgentOpenCalls:
+    DashboardOpenCall[];
+
+  topDowntimeAssets:
+    DashboardDowntimeAsset[];
+
+  assetStatuses:
+    DashboardAssetStatus[];
 };
 
-const SHIFT_MINUTES = 9 * 60;
+const SHIFT_MINUTES =
+  9 * 60;
 
-const priorityRank: Record<WorkOrderPriority, number> = {
+const priorityRank:
+  Record<
+    WorkOrderPriority,
+    number
+  > = {
   high: 1,
   medium: 2,
   low: 3,
 };
 
-function startOfToday(): Date {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
+/* -------------------------------- */
+/* Date helpers                     */
+/* -------------------------------- */
+
+function startOfToday():
+  Date {
+  const date =
+    new Date();
+
+  date.setHours(
+    0,
+    0,
+    0,
+    0,
+  );
+
   return date;
 }
 
-function endOfToday(): Date {
-  const date = new Date();
-  date.setHours(23, 59, 59, 999);
+function endOfToday():
+  Date {
+  const date =
+    new Date();
+
+  date.setHours(
+    23,
+    59,
+    59,
+    999,
+  );
+
   return date;
 }
 
 function getElapsedMinutes(
   startValue: string,
-  endValue: string | null = null
+  endValue:
+    string | null = null,
 ): number {
-  const startTime = new Date(startValue).getTime();
+  const startTime =
+    new Date(
+      startValue,
+    ).getTime();
 
-  const endTime = endValue
-    ? new Date(endValue).getTime()
-    : Date.now();
+  const endTime =
+    endValue
+      ? new Date(
+          endValue,
+        ).getTime()
+      : Date.now();
 
   if (
-    Number.isNaN(startTime) ||
-    Number.isNaN(endTime) ||
-    endTime <= startTime
-  ) {
-    return 0;
-  }
-
-  return Math.floor((endTime - startTime) / 60000);
-}
-
-function getOverlappingMinutes(
-  workOrder: WorkOrder,
-  rangeStart: Date,
-  rangeEnd: Date
-): number {
-  if (!workOrder.isDowntime) {
-    return 0;
-  }
-
-  const workOrderStart = new Date(
-    workOrder.openedAt
-  ).getTime();
-
-  const workOrderEnd = workOrder.closedAt
-    ? new Date(workOrder.closedAt).getTime()
-    : Date.now();
-
-  const overlapStart = Math.max(
-    workOrderStart,
-    rangeStart.getTime()
-  );
-
-  const overlapEnd = Math.min(
-    workOrderEnd,
-    rangeEnd.getTime(),
-    Date.now()
-  );
-
-  if (
-    Number.isNaN(overlapStart) ||
-    Number.isNaN(overlapEnd) ||
-    overlapEnd <= overlapStart
+    Number.isNaN(
+      startTime,
+    ) ||
+    Number.isNaN(
+      endTime,
+    ) ||
+    endTime <=
+      startTime
   ) {
     return 0;
   }
 
   return Math.floor(
-    (overlapEnd - overlapStart) / 60000
+    (endTime -
+      startTime) /
+      60000,
   );
 }
 
+/* -------------------------------- */
+/* Dashboard Asset population       */
+/* -------------------------------- */
+
+function getDashboardAssets() {
+  /*
+   * Plant-wide availability must count
+   * primary operational assets only.
+   *
+   * Sub-assets/components must not create
+   * duplicate planned operating capacity.
+   */
+  return getLiveAssets().filter(
+    (asset) =>
+      asset.active &&
+      (
+        asset.hierarchyLevel ===
+          "asset" ||
+        asset.hierarchyLevel ===
+          "production-line"
+      ),
+  );
+}
+
+/* -------------------------------- */
+/* Downtime                         */
+/* -------------------------------- */
+
+function getOverlappingMinutes(
+  workOrder: WorkOrder,
+  rangeStart: Date,
+  rangeEnd: Date,
+): number {
+  if (
+    !workOrder.isDowntime ||
+    workOrder.type !==
+      "fault"
+  ) {
+    return 0;
+  }
+
+  const workOrderStart =
+    new Date(
+      workOrder.openedAt,
+    ).getTime();
+
+  const workOrderEnd =
+    workOrder.closedAt
+      ? new Date(
+          workOrder.closedAt,
+        ).getTime()
+      : Date.now();
+
+  if (
+    Number.isNaN(
+      workOrderStart,
+    ) ||
+    Number.isNaN(
+      workOrderEnd,
+    )
+  ) {
+    return 0;
+  }
+
+  const overlapStart =
+    Math.max(
+      workOrderStart,
+      rangeStart.getTime(),
+    );
+
+  const overlapEnd =
+    Math.min(
+      workOrderEnd,
+      rangeEnd.getTime(),
+      Date.now(),
+    );
+
+  if (
+    overlapEnd <=
+    overlapStart
+  ) {
+    return 0;
+  }
+
+  return Math.floor(
+    (overlapEnd -
+      overlapStart) /
+      60000,
+  );
+}
+
+/* -------------------------------- */
+/* Availability                     */
+/* -------------------------------- */
+
 function calculateAvailabilityToday(
-  workOrders: WorkOrder[]
+  workOrders: WorkOrder[],
 ): {
   availability: number;
+
   downtimeMinutes: number;
 } {
-  const activeMachines = machines.filter(
-    (machine) => machine.active
-  );
+  const assets =
+    getDashboardAssets();
 
-  if (activeMachines.length === 0) {
+  if (
+    assets.length === 0
+  ) {
     return {
-      availability: 100,
-      downtimeMinutes: 0,
+      availability:
+        100,
+
+      downtimeMinutes:
+        0,
     };
   }
 
-  const todayStart = startOfToday();
-  const todayEnd = endOfToday();
-
-  const downtimeMinutes = workOrders.reduce(
-    (total, workOrder) =>
-      total +
-      getOverlappingMinutes(
-        workOrder,
-        todayStart,
-        todayEnd
+  const assetIds =
+    new Set(
+      assets.map(
+        (asset) =>
+          asset.id,
       ),
-    0
-  );
+    );
 
-  const plannedMachineMinutes =
-    activeMachines.length * SHIFT_MINUTES;
+  const todayStart =
+    startOfToday();
+
+  const todayEnd =
+    endOfToday();
+
+  const downtimeMinutes =
+    workOrders
+      .filter(
+        (workOrder) =>
+          assetIds.has(
+            workOrder.assetId,
+          ),
+      )
+      .reduce(
+        (
+          total,
+          workOrder,
+        ) =>
+          total +
+          getOverlappingMinutes(
+            workOrder,
+            todayStart,
+            todayEnd,
+          ),
+        0,
+      );
+
+  const plannedMinutes =
+    assets.length *
+    SHIFT_MINUTES;
+
+  const cappedDowntime =
+    Math.min(
+      plannedMinutes,
+      downtimeMinutes,
+    );
 
   const availability =
-    ((plannedMachineMinutes - downtimeMinutes) /
-      plannedMachineMinutes) *
+    ((plannedMinutes -
+      cappedDowntime) /
+      plannedMinutes) *
     100;
 
   return {
-    availability: Math.max(
-      0,
-      Math.min(100, availability)
-    ),
+    availability:
+      Math.max(
+        0,
+        Math.min(
+          100,
+          availability,
+        ),
+      ),
+
     downtimeMinutes,
   };
 }
 
+/* -------------------------------- */
+/* Open Calls                       */
+/* -------------------------------- */
+
 function buildUrgentOpenCalls(
-  workOrders: WorkOrder[]
+  workOrders: WorkOrder[],
 ): DashboardOpenCall[] {
   return workOrders
     .filter(
       (workOrder) =>
-        workOrder.status !== "closed"
+        workOrder.status !==
+        "closed",
     )
-    .sort((first, second) => {
-      if (
-        first.isDowntime !== second.isDowntime
-      ) {
-        return first.isDowntime ? -1 : 1;
-      }
+    .sort(
+      (
+        first,
+        second,
+      ) => {
+        if (
+          first.isDowntime !==
+          second.isDowntime
+        ) {
+          return first.isDowntime
+            ? -1
+            : 1;
+        }
 
-      if (
-        priorityRank[first.priority] !==
-        priorityRank[second.priority]
-      ) {
+        const priorityDifference =
+          priorityRank[
+            first.priority
+          ] -
+          priorityRank[
+            second.priority
+          ];
+
+        if (
+          priorityDifference !==
+          0
+        ) {
+          return priorityDifference;
+        }
+
         return (
-          priorityRank[first.priority] -
-          priorityRank[second.priority]
+          new Date(
+            first.openedAt,
+          ).getTime() -
+          new Date(
+            second.openedAt,
+          ).getTime()
         );
-      }
+      },
+    )
+    .slice(
+      0,
+      10,
+    )
+    .map(
+      (workOrder) => ({
+        id:
+          workOrder.id,
 
-      return (
-        new Date(first.openedAt).getTime() -
-        new Date(second.openedAt).getTime()
-      );
-    })
-    .slice(0, 10)
-    .map((workOrder) => ({
-      id: workOrder.id,
-      workOrderNumber:
-        workOrder.workOrderNumber,
-      machineCode: workOrder.machineCode,
-      machineDisplayNumber:
-        workOrder.machineDisplayNumber,
-      machineName: workOrder.machineName,
-      department: workOrder.department,
-      faultDescription:
-        workOrder.faultDescription,
-      priority: workOrder.priority,
-      isDowntime: workOrder.isDowntime,
-      openedAt: workOrder.openedAt,
-      openMinutes: getElapsedMinutes(
-        workOrder.openedAt
-      ),
-    }));
+        workOrderNumber:
+          workOrder.workOrderNumber,
+
+        assetId:
+          workOrder.assetId,
+
+        assetCode:
+          workOrder.assetCode,
+
+        assetNumber:
+          workOrder.assetNumber,
+
+        assetName:
+          workOrder.assetName,
+
+        department:
+          workOrder.department,
+
+        faultDescription:
+          workOrder.faultDescription,
+
+        priority:
+          workOrder.priority,
+
+        isDowntime:
+          workOrder.isDowntime,
+
+        openedAt:
+          workOrder.openedAt,
+
+        openMinutes:
+          getElapsedMinutes(
+            workOrder.openedAt,
+          ),
+      }),
+    );
 }
 
-function buildTopDowntimeMachines(
-  workOrders: WorkOrder[]
-): DashboardDowntimeMachine[] {
-  const downtimeByMachine = new Map<
-    string,
-    DashboardDowntimeMachine
-  >();
+/* -------------------------------- */
+/* Top downtime                     */
+/* -------------------------------- */
+
+function buildTopDowntimeAssets(
+  workOrders: WorkOrder[],
+): DashboardDowntimeAsset[] {
+  const downtimeByAsset =
+    new Map<
+      string,
+      DashboardDowntimeAsset
+    >();
 
   workOrders
-    .filter((workOrder) => workOrder.isDowntime)
-    .forEach((workOrder) => {
-      const downtimeMinutes = getElapsedMinutes(
-        workOrder.openedAt,
-        workOrder.closedAt
-      );
+    .filter(
+      (workOrder) =>
+        workOrder.type ===
+          "fault" &&
+        workOrder.isDowntime,
+    )
+    .forEach(
+      (workOrder) => {
+        const downtimeMinutes =
+          getElapsedMinutes(
+            workOrder.openedAt,
+            workOrder.closedAt,
+          );
 
-      const existing = downtimeByMachine.get(
-        workOrder.machineCode
-      );
+        const existing =
+          downtimeByAsset.get(
+            workOrder.assetId,
+          );
 
-      if (existing) {
-        downtimeByMachine.set(
-          workOrder.machineCode,
-          {
-            ...existing,
-            downtimeMinutes:
-              existing.downtimeMinutes +
-              downtimeMinutes,
-          }
-        );
+        if (existing) {
+          downtimeByAsset.set(
+            workOrder.assetId,
+            {
+              ...existing,
 
-        return;
-      }
+              downtimeMinutes:
+                existing.downtimeMinutes +
+                downtimeMinutes,
+            },
+          );
 
-      downtimeByMachine.set(
-        workOrder.machineCode,
-        {
-          machineCode: workOrder.machineCode,
-          machineDisplayNumber:
-            workOrder.machineDisplayNumber,
-          machineName: workOrder.machineName,
-          department: workOrder.department,
-          downtimeMinutes,
+          return;
         }
-      );
-    });
+
+        downtimeByAsset.set(
+          workOrder.assetId,
+          {
+            assetId:
+              workOrder.assetId,
+
+            assetCode:
+              workOrder.assetCode,
+
+            assetNumber:
+              workOrder.assetNumber,
+
+            assetName:
+              workOrder.assetName,
+
+            department:
+              workOrder.department,
+
+            downtimeMinutes,
+          },
+        );
+      },
+    );
 
   return Array.from(
-    downtimeByMachine.values()
+    downtimeByAsset.values(),
   )
     .sort(
-      (first, second) =>
+      (
+        first,
+        second,
+      ) =>
         second.downtimeMinutes -
-        first.downtimeMinutes
+        first.downtimeMinutes,
     )
-    .slice(0, 5);
+    .slice(
+      0,
+      5,
+    );
 }
 
-function buildMachineStatuses(
-  workOrders: WorkOrder[]
-): DashboardMachineStatus[] {
-  const activeWorkOrders = workOrders.filter(
-    (workOrder) =>
-      workOrder.status !== "closed"
-  );
+/* -------------------------------- */
+/* Asset statuses                   */
+/* -------------------------------- */
 
-  return machines
-    .filter((machine) => machine.active)
-    .map((machine) => {
-      const machineWorkOrders =
+function buildAssetStatuses(
+  workOrders: WorkOrder[],
+): DashboardAssetStatus[] {
+  const assets =
+    getDashboardAssets();
+
+  const activeWorkOrders =
+    workOrders.filter(
+      (workOrder) =>
+        workOrder.status !==
+        "closed",
+    );
+
+  return assets.map(
+    (asset) => {
+      const assetWorkOrders =
         activeWorkOrders.filter(
           (workOrder) =>
-            workOrder.machineCode ===
-            machine.code
+            workOrder.assetId ===
+            asset.id,
         );
 
       const downtimeWorkOrders =
-        machineWorkOrders.filter(
+        assetWorkOrders.filter(
           (workOrder) =>
-            workOrder.isDowntime
+            workOrder.isDowntime,
         );
 
-      let status: MachineLiveStatus =
+      const preventiveWorkOrders =
+        assetWorkOrders.filter(
+          (workOrder) =>
+            workOrder.type ===
+            "preventive",
+        );
+
+      let status:
+        AssetStatus =
         "running";
 
-      if (downtimeWorkOrders.length > 0) {
-        status = "alarm";
-      } else if (machineWorkOrders.length > 0) {
-        status = "warning";
+      if (
+        downtimeWorkOrders.length >
+        0
+      ) {
+        status =
+          "alarm";
+      } else if (
+        preventiveWorkOrders.length >
+        0
+      ) {
+        status =
+          "maintenance";
+      } else if (
+        assetWorkOrders.length >
+        0
+      ) {
+        status =
+          "warning";
       }
 
       return {
-        machineCode: machine.code,
-        machineDisplayNumber:
-          machine.displayNumber,
-        machineName: machine.name,
-        department: machine.department,
+        assetId:
+          asset.id,
+
+        assetCode:
+          asset.assetCode,
+
+        assetNumber:
+          asset.assetNumber,
+
+        assetName:
+          asset.displayName,
+
+        department:
+          asset.department,
+
         status,
+
         openWorkOrders:
-          machineWorkOrders.length,
+          assetWorkOrders.length,
+
         downtimeWorkOrders:
           downtimeWorkOrders.length,
       };
-    });
+    },
+  );
 }
 
-export function getDashboardSnapshot(): DashboardSnapshot {
-  const workOrders = getWorkOrders();
+/* -------------------------------- */
+/* Public snapshot                  */
+/* -------------------------------- */
 
-  const todayStart = startOfToday();
-  const todayEnd = endOfToday();
+export function getDashboardSnapshot():
+  DashboardSnapshot {
+  const workOrders =
+    getWorkOrders();
 
-  const activeWorkOrders = workOrders.filter(
-    (workOrder) =>
-      workOrder.status !== "closed"
-  );
+  const todayStart =
+    startOfToday();
 
-  const downtimeMachineCodes = new Set(
-    activeWorkOrders
-      .filter(
-        (workOrder) => workOrder.isDowntime
-      )
-      .map(
-        (workOrder) =>
-          workOrder.machineCode
-      )
-  );
+  const todayEnd =
+    endOfToday();
 
-  const closedToday = workOrders.filter(
-    (workOrder) => {
-      if (!workOrder.closedAt) {
-        return false;
-      }
+  const activeWorkOrders =
+    workOrders.filter(
+      (workOrder) =>
+        workOrder.status !==
+        "closed",
+    );
 
-      const closedTime = new Date(
-        workOrder.closedAt
-      ).getTime();
+  const downtimeAssetIds =
+    new Set(
+      activeWorkOrders
+        .filter(
+          (workOrder) =>
+            workOrder.isDowntime,
+        )
+        .map(
+          (workOrder) =>
+            workOrder.assetId,
+        ),
+    );
 
-      return (
-        closedTime >= todayStart.getTime() &&
-        closedTime <= todayEnd.getTime()
-      );
-    }
-  ).length;
+  const closedToday =
+    workOrders.filter(
+      (workOrder) => {
+        if (
+          !workOrder.closedAt
+        ) {
+          return false;
+        }
+
+        const closedTime =
+          new Date(
+            workOrder.closedAt,
+          ).getTime();
+
+        if (
+          Number.isNaN(
+            closedTime,
+          )
+        ) {
+          return false;
+        }
+
+        return (
+          closedTime >=
+            todayStart.getTime() &&
+          closedTime <=
+            todayEnd.getTime()
+        );
+      },
+    ).length;
 
   const availabilityResult =
-    calculateAvailabilityToday(workOrders);
+    calculateAvailabilityToday(
+      workOrders,
+    );
 
   return {
-    generatedAt: new Date().toISOString(),
+    generatedAt:
+      new Date().toISOString(),
 
     openWorkOrders:
       activeWorkOrders.length,
@@ -396,11 +741,12 @@ export function getDashboardSnapshot(): DashboardSnapshot {
     pausedWorkOrders:
       activeWorkOrders.filter(
         (workOrder) =>
-          workOrder.status === "paused"
+          workOrder.status ===
+          "paused",
       ).length,
 
-    downtimeMachines:
-      downtimeMachineCodes.size,
+    downtimeAssets:
+      downtimeAssetIds.size,
 
     closedToday,
 
@@ -411,12 +757,18 @@ export function getDashboardSnapshot(): DashboardSnapshot {
       availabilityResult.downtimeMinutes,
 
     urgentOpenCalls:
-      buildUrgentOpenCalls(workOrders),
+      buildUrgentOpenCalls(
+        workOrders,
+      ),
 
-    topDowntimeMachines:
-      buildTopDowntimeMachines(workOrders),
+    topDowntimeAssets:
+      buildTopDowntimeAssets(
+        workOrders,
+      ),
 
-    machineStatuses:
-      buildMachineStatuses(workOrders),
+    assetStatuses:
+      buildAssetStatuses(
+        workOrders,
+      ),
   };
 }

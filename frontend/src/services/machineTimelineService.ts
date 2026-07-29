@@ -1,4 +1,7 @@
-import type { WorkOrder } from "../types/workOrder";
+import type {
+  WorkOrder,
+} from "../types/workOrder";
+
 import type {
   MaintenanceExecutionStatus,
   PreventiveMaintenanceExecution,
@@ -7,6 +10,7 @@ import type {
 import {
   getMachineWorkOrders,
 } from "./machineService";
+
 import {
   getMachineExecutions,
 } from "./preventiveMaintenanceService";
@@ -29,30 +33,41 @@ export type MachineTimelineEventSeverity =
 export type MachineTimelineEvent = {
   id: string;
 
-  eventType: MachineTimelineEventType;
-  severity: MachineTimelineEventSeverity;
+  eventType:
+    MachineTimelineEventType;
+
+  severity:
+    MachineTimelineEventSeverity;
 
   title: string;
+
   description: string;
 
   occurredAt: string;
-  completedAt: string | null;
+
+  completedAt:
+    string | null;
 
   sourceType:
     | "work_order"
     | "preventive_maintenance";
 
   sourceId: string;
+
   sourceNumber: string;
 
   assetNumber: string;
+
   machineCode: string;
 
   statusLabel: string;
+
   responsibleName: string;
 
   isDowntime: boolean;
-  durationMinutes: number | null;
+
+  durationMinutes:
+    number | null;
 
   details: string[];
 };
@@ -61,71 +76,110 @@ export type MachineTimelineSummary = {
   totalEvents: number;
 
   breakdownEvents: number;
-  preventiveMaintenanceEvents: number;
+
+  workOrderEvents: number;
+
+  preventiveMaintenanceEvents:
+    number;
+
   inspectionEvents: number;
+
+  improvementEvents: number;
+
   safetyEvents: number;
 
   downtimeEvents: number;
 
   eventsLast7Days: number;
+
   eventsLast30Days: number;
 
-  latestEvent: MachineTimelineEvent | null;
+  latestEvent:
+    MachineTimelineEvent | null;
 };
 
 export type MachineTimelineSnapshot = {
   generatedAt: string;
 
   assetNumber: string;
+
   machineCode: string;
 
-  events: MachineTimelineEvent[];
-  summary: MachineTimelineSummary;
+  events:
+    MachineTimelineEvent[];
+
+  summary:
+    MachineTimelineSummary;
 };
 
 function getDurationMinutes(
   startValue: string | null,
-  endValue: string | null
+  endValue: string | null,
 ): number | null {
-  if (!startValue || !endValue) {
+  if (
+    !startValue ||
+    !endValue
+  ) {
     return null;
   }
 
   const startTime =
-    new Date(startValue).getTime();
+    new Date(
+      startValue,
+    ).getTime();
 
   const endTime =
-    new Date(endValue).getTime();
+    new Date(
+      endValue,
+    ).getTime();
 
   if (
-    Number.isNaN(startTime) ||
-    Number.isNaN(endTime) ||
-    endTime <= startTime
+    Number.isNaN(
+      startTime,
+    ) ||
+    Number.isNaN(
+      endTime,
+    ) ||
+    endTime <=
+      startTime
   ) {
     return null;
   }
 
   return Math.floor(
-    (endTime - startTime) / 60000
+    (endTime -
+      startTime) /
+      60000,
   );
 }
 
 function getWorkOrderEventType(
-  workOrder: WorkOrder
+  workOrder: WorkOrder,
 ): MachineTimelineEventType {
-  if (workOrder.type === "preventive") {
+  if (
+    workOrder.type ===
+    "preventive"
+  ) {
     return "preventive_maintenance";
   }
 
-  if (workOrder.type === "safety") {
+  if (
+    workOrder.type ===
+    "safety"
+  ) {
     return "safety";
   }
 
-  if (workOrder.type === "improvement") {
+  if (
+    workOrder.type ===
+    "improvement"
+  ) {
     return "improvement";
   }
 
-  if (workOrder.isDowntime) {
+  if (
+    workOrder.isDowntime
+  ) {
     return "breakdown";
   }
 
@@ -133,28 +187,41 @@ function getWorkOrderEventType(
 }
 
 function getWorkOrderSeverity(
-  workOrder: WorkOrder
+  workOrder: WorkOrder,
 ): MachineTimelineEventSeverity {
   if (
     workOrder.isDowntime &&
-    workOrder.status !== "closed"
+    workOrder.status !==
+      "closed"
   ) {
     return "danger";
   }
 
-  if (workOrder.status === "paused") {
+  if (
+    workOrder.status ===
+    "paused"
+  ) {
     return "warning";
   }
 
-  if (workOrder.status === "closed") {
+  if (
+    workOrder.status ===
+    "closed"
+  ) {
     return "success";
   }
 
-  if (workOrder.priority === "high") {
+  if (
+    workOrder.priority ===
+    "high"
+  ) {
     return "danger";
   }
 
-  if (workOrder.priority === "medium") {
+  if (
+    workOrder.priority ===
+    "medium"
+  ) {
     return "warning";
   }
 
@@ -162,17 +229,25 @@ function getWorkOrderSeverity(
 }
 
 function getWorkOrderStatusLabel(
-  workOrder: WorkOrder
+  workOrder: WorkOrder,
 ): string {
-  if (workOrder.status === "closed") {
+  if (
+    workOrder.status ===
+    "closed"
+  ) {
     return "סגור";
   }
 
-  if (workOrder.status === "paused") {
+  if (
+    workOrder.status ===
+    "paused"
+  ) {
     return "מושהה";
   }
 
-  if (workOrder.takenAt) {
+  if (
+    workOrder.takenAt
+  ) {
     return "בטיפול";
   }
 
@@ -180,7 +255,7 @@ function getWorkOrderStatusLabel(
 }
 
 function mapWorkOrderToTimelineEvent(
-  workOrder: WorkOrder
+  workOrder: WorkOrder,
 ): MachineTimelineEvent {
   const endValue =
     workOrder.closedAt ??
@@ -189,57 +264,65 @@ function mapWorkOrderToTimelineEvent(
   const durationMinutes =
     getDurationMinutes(
       workOrder.openedAt,
-      endValue
+      endValue,
     );
 
-  const details: string[] = [];
+  const details:
+    string[] = [];
 
-  if (workOrder.department) {
+  if (
+    workOrder.department
+  ) {
     details.push(
-      `מחלקה: ${workOrder.department}`
-    );
-  }
-
-  if (workOrder.openedBy) {
-    details.push(
-      `נפתחה על ידי: ${workOrder.openedBy}`
-    );
-  }
-
-  if (workOrder.takenBy) {
-    details.push(
-      `מטפל: ${workOrder.takenBy}`
-    );
-  }
-
-  if (workOrder.repairDescription) {
-    details.push(
-      `טיפול: ${workOrder.repairDescription}`
+      `מחלקה: ${workOrder.department}`,
     );
   }
 
   if (
-    Array.isArray(
-      workOrder.replacedParts
-    ) &&
-    workOrder.replacedParts.length > 0
+    workOrder.openedBy
   ) {
     details.push(
-      `חלקים שהוחלפו: ${workOrder.replacedParts.length}`
+      `נפתחה על ידי: ${workOrder.openedBy}`,
+    );
+  }
+
+  if (
+    workOrder.takenBy
+  ) {
+    details.push(
+      `מטפל: ${workOrder.takenBy}`,
+    );
+  }
+
+  if (
+    workOrder.repairDescription
+  ) {
+    details.push(
+      `טיפול: ${workOrder.repairDescription}`,
+    );
+  }
+
+  if (
+    workOrder.replacedParts.length >
+    0
+  ) {
+    details.push(
+      `חלקים שהוחלפו: ${workOrder.replacedParts.length}`,
     );
   }
 
   return {
-    id: `work-order-${workOrder.id}`,
+    id:
+      `work-order-${workOrder.id}`,
 
     eventType:
       getWorkOrderEventType(
-        workOrder
+        workOrder,
       ),
 
     severity:
       getWorkOrderSeverity(
-        workOrder
+        workOrder,
       ),
 
     title:
@@ -265,14 +348,20 @@ function mapWorkOrderToTimelineEvent(
       workOrder.workOrderNumber,
 
     assetNumber:
-      workOrder.machineDisplayNumber,
+      workOrder.assetNumber,
 
+    /*
+     * Legacy field name.
+     *
+     * In the Asset model this value
+     * is actually Asset.assetCode.
+     */
     machineCode:
-      workOrder.machineCode,
+      workOrder.assetCode,
 
     statusLabel:
       getWorkOrderStatusLabel(
-        workOrder
+        workOrder,
       ),
 
     responsibleName:
@@ -290,25 +379,36 @@ function mapWorkOrderToTimelineEvent(
 }
 
 function getMaintenanceSeverity(
-  status: MaintenanceExecutionStatus
+  status:
+    MaintenanceExecutionStatus,
 ): MachineTimelineEventSeverity {
-  if (status === "overdue") {
+  if (
+    status === "overdue"
+  ) {
     return "danger";
   }
 
-  if (status === "due") {
+  if (
+    status === "due"
+  ) {
     return "warning";
   }
 
-  if (status === "in_progress") {
+  if (
+    status === "in_progress"
+  ) {
     return "info";
   }
 
-  if (status === "completed") {
+  if (
+    status === "completed"
+  ) {
     return "success";
   }
 
-  if (status === "cancelled") {
+  if (
+    status === "cancelled"
+  ) {
     return "neutral";
   }
 
@@ -316,25 +416,36 @@ function getMaintenanceSeverity(
 }
 
 function getMaintenanceStatusLabel(
-  status: MaintenanceExecutionStatus
+  status:
+    MaintenanceExecutionStatus,
 ): string {
-  if (status === "overdue") {
+  if (
+    status === "overdue"
+  ) {
     return "באיחור";
   }
 
-  if (status === "due") {
+  if (
+    status === "due"
+  ) {
     return "לביצוע";
   }
 
-  if (status === "in_progress") {
+  if (
+    status === "in_progress"
+  ) {
     return "בביצוע";
   }
 
-  if (status === "completed") {
+  if (
+    status === "completed"
+  ) {
     return "הושלם";
   }
 
-  if (status === "cancelled") {
+  if (
+    status === "cancelled"
+  ) {
     return "בוטל";
   }
 
@@ -342,58 +453,70 @@ function getMaintenanceStatusLabel(
 }
 
 function mapMaintenanceToTimelineEvent(
-  execution: PreventiveMaintenanceExecution
+  execution:
+    PreventiveMaintenanceExecution,
 ): MachineTimelineEvent {
   const durationMinutes =
     execution.actualDurationMinutes ??
     getDurationMinutes(
       execution.startedAt,
-      execution.completedAt
+      execution.completedAt,
     );
 
-  const details: string[] = [];
+  const details:
+    string[] = [];
 
-  if (execution.workPerformed) {
+  if (
+    execution.workPerformed
+  ) {
     details.push(
-      `עבודה שבוצעה: ${execution.workPerformed}`
-    );
-  }
-
-  if (execution.findings) {
-    details.push(
-      `ממצאים: ${execution.findings}`
-    );
-  }
-
-  if (execution.recommendations) {
-    details.push(
-      `המלצות: ${execution.recommendations}`
+      `עבודה שבוצעה: ${execution.workPerformed}`,
     );
   }
 
   if (
-    execution.replacedParts.length > 0
+    execution.findings
   ) {
     details.push(
-      `חלקים שהוחלפו: ${execution.replacedParts.length}`
+      `ממצאים: ${execution.findings}`,
     );
   }
 
-  if (execution.lockoutTagoutApplied) {
+  if (
+    execution.recommendations
+  ) {
     details.push(
-      "בוצע נוהל נעילה ותיוג"
+      `המלצות: ${execution.recommendations}`,
+    );
+  }
+
+  if (
+    execution.replacedParts.length >
+    0
+  ) {
+    details.push(
+      `חלקים שהוחלפו: ${execution.replacedParts.length}`,
+    );
+  }
+
+  if (
+    execution.lockoutTagoutApplied
+  ) {
+    details.push(
+      "בוצע נוהל נעילה ותיוג",
     );
   }
 
   return {
-    id: `pm-${execution.id}`,
+    id:
+      `pm-${execution.id}`,
 
     eventType:
       "preventive_maintenance",
 
     severity:
       getMaintenanceSeverity(
-        execution.status
+        execution.status,
       ),
 
     title:
@@ -428,7 +551,7 @@ function mapMaintenanceToTimelineEvent(
 
     statusLabel:
       getMaintenanceStatusLabel(
-        execution.status
+        execution.status,
       ),
 
     responsibleName:
@@ -447,24 +570,38 @@ function mapMaintenanceToTimelineEvent(
 
 function isWithinDays(
   dateValue: string,
-  days: number
+  days: number,
 ): boolean {
   const eventTime =
-    new Date(dateValue).getTime();
+    new Date(
+      dateValue,
+    ).getTime();
 
-  if (Number.isNaN(eventTime)) {
+  if (
+    Number.isNaN(
+      eventTime,
+    )
+  ) {
     return false;
   }
 
   const minimumTime =
     Date.now() -
-    days * 24 * 60 * 60 * 1000;
+    days *
+      24 *
+      60 *
+      60 *
+      1000;
 
-  return eventTime >= minimumTime;
+  return (
+    eventTime >=
+    minimumTime
+  );
 }
 
 function buildSummary(
-  events: MachineTimelineEvent[]
+  events:
+    MachineTimelineEvent[],
 ): MachineTimelineSummary {
   return {
     totalEvents:
@@ -474,34 +611,48 @@ function buildSummary(
       events.filter(
         (event) =>
           event.eventType ===
-          "breakdown"
+          "breakdown",
+      ).length,
+
+    workOrderEvents:
+      events.filter(
+        (event) =>
+          event.eventType ===
+          "work_order",
       ).length,
 
     preventiveMaintenanceEvents:
       events.filter(
         (event) =>
           event.eventType ===
-          "preventive_maintenance"
+          "preventive_maintenance",
       ).length,
 
     inspectionEvents:
       events.filter(
         (event) =>
           event.eventType ===
-          "inspection"
+          "inspection",
+      ).length,
+
+    improvementEvents:
+      events.filter(
+        (event) =>
+          event.eventType ===
+          "improvement",
       ).length,
 
     safetyEvents:
       events.filter(
         (event) =>
           event.eventType ===
-          "safety"
+          "safety",
       ).length,
 
     downtimeEvents:
       events.filter(
         (event) =>
-          event.isDowntime
+          event.isDowntime,
       ).length,
 
     eventsLast7Days:
@@ -509,8 +660,8 @@ function buildSummary(
         (event) =>
           isWithinDays(
             event.occurredAt,
-            7
-          )
+            7,
+          ),
       ).length,
 
     eventsLast30Days:
@@ -518,44 +669,52 @@ function buildSummary(
         (event) =>
           isWithinDays(
             event.occurredAt,
-            30
-          )
+            30,
+          ),
       ).length,
 
     latestEvent:
-      events[0] ?? null,
+      events[0] ??
+      null,
   };
 }
 
 export function getMachineTimelineSnapshot(
   assetNumber: string,
-  machineCode: string
+  machineCode: string,
 ): MachineTimelineSnapshot {
+  /*
+   * machineCode is now the legacy alias
+   * for Asset.assetCode.
+   */
   const workOrderEvents =
     getMachineWorkOrders(
-      machineCode
+      machineCode,
     ).map(
-      mapWorkOrderToTimelineEvent
+      mapWorkOrderToTimelineEvent,
     );
 
   const maintenanceEvents =
     getMachineExecutions(
-      assetNumber
+      assetNumber,
     ).map(
-      mapMaintenanceToTimelineEvent
+      mapMaintenanceToTimelineEvent,
     );
 
   const events = [
     ...workOrderEvents,
     ...maintenanceEvents,
   ].sort(
-    (first, second) =>
+    (
+      first,
+      second,
+    ) =>
       new Date(
-        second.occurredAt
+        second.occurredAt,
       ).getTime() -
       new Date(
-        first.occurredAt
-      ).getTime()
+        first.occurredAt,
+      ).getTime(),
   );
 
   return {
@@ -563,11 +722,14 @@ export function getMachineTimelineSnapshot(
       new Date().toISOString(),
 
     assetNumber,
+
     machineCode,
 
     events,
 
     summary:
-      buildSummary(events),
+      buildSummary(
+        events,
+      ),
   };
 }

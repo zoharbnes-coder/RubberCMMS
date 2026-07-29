@@ -57,8 +57,7 @@ export type AssetTimelineEvent = {
 
   sourceNumber: string;
 
-  assetId:
-    string | null;
+  assetId: string;
 
   assetNumber: string;
 
@@ -118,6 +117,10 @@ export type AssetTimelineSnapshot = {
     AssetTimelineSummary;
 };
 
+/* -------------------------------- */
+/* Time helpers                     */
+/* -------------------------------- */
+
 function getDurationMinutes(
   startValue: string | null,
   endValue: string | null,
@@ -152,6 +155,10 @@ function getDurationMinutes(
       60000,
   );
 }
+
+/* -------------------------------- */
+/* Work Order mapping               */
+/* -------------------------------- */
 
 function getWorkOrderEventType(
   workOrder: WorkOrder,
@@ -256,8 +263,6 @@ function getWorkOrderStatusLabel(
 
 function mapWorkOrderToTimelineEvent(
   workOrder: WorkOrder,
-  assetId: string,
-  assetCode: string,
 ): AssetTimelineEvent {
   const endValue =
     workOrder.closedAt ??
@@ -305,11 +310,8 @@ function mapWorkOrderToTimelineEvent(
   }
 
   if (
-    Array.isArray(
-      workOrder.replacedParts,
-    ) &&
-    workOrder.replacedParts
-      .length > 0
+    workOrder.replacedParts.length >
+    0
   ) {
     details.push(
       `חלקים שהוחלפו: ${workOrder.replacedParts.length}`,
@@ -352,12 +354,14 @@ function mapWorkOrderToTimelineEvent(
     sourceNumber:
       workOrder.workOrderNumber,
 
-    assetId,
+    assetId:
+      workOrder.assetId,
 
     assetNumber:
-      workOrder.machineDisplayNumber,
+      workOrder.assetNumber,
 
-    assetCode,
+    assetCode:
+      workOrder.assetCode,
 
     statusLabel:
       getWorkOrderStatusLabel(
@@ -377,6 +381,10 @@ function mapWorkOrderToTimelineEvent(
     details,
   };
 }
+
+/* -------------------------------- */
+/* Preventive Maintenance mapping   */
+/* -------------------------------- */
 
 function getMaintenanceSeverity(
   status:
@@ -455,10 +463,6 @@ function getMaintenanceStatusLabel(
 function mapMaintenanceToTimelineEvent(
   execution:
     PreventiveMaintenanceExecution,
-
-  assetId: string,
-
-  assetCode: string,
 ): AssetTimelineEvent {
   const durationMinutes =
     execution.actualDurationMinutes ??
@@ -495,8 +499,8 @@ function mapMaintenanceToTimelineEvent(
   }
 
   if (
-    execution.replacedParts
-      .length > 0
+    execution.replacedParts.length >
+    0
   ) {
     details.push(
       `חלקים שהוחלפו: ${execution.replacedParts.length}`,
@@ -504,8 +508,7 @@ function mapMaintenanceToTimelineEvent(
   }
 
   if (
-    execution
-      .lockoutTagoutApplied
+    execution.lockoutTagoutApplied
   ) {
     details.push(
       "בוצע נוהל נעילה ותיוג",
@@ -548,12 +551,14 @@ function mapMaintenanceToTimelineEvent(
     sourceNumber:
       execution.executionNumber,
 
-    assetId,
+    assetId:
+      execution.assetId,
 
     assetNumber:
       execution.assetNumber,
 
-    assetCode,
+    assetCode:
+      execution.assetCode,
 
     statusLabel:
       getMaintenanceStatusLabel(
@@ -566,13 +571,17 @@ function mapMaintenanceToTimelineEvent(
       "טרם שויך",
 
     isDowntime:
-      execution.machineStopped,
+      execution.assetStopped,
 
     durationMinutes,
 
     details,
   };
 }
+
+/* -------------------------------- */
+/* Timeline period helpers          */
+/* -------------------------------- */
 
 function isWithinDays(
   dateValue: string,
@@ -598,9 +607,14 @@ function isWithinDays(
       1000;
 
   return (
-    eventTime >= minimumTime
+    eventTime >=
+    minimumTime
   );
 }
+
+/* -------------------------------- */
+/* Summary                          */
+/* -------------------------------- */
 
 function buildSummary(
   events:
@@ -682,6 +696,10 @@ function buildSummary(
   };
 }
 
+/* -------------------------------- */
+/* Public API                       */
+/* -------------------------------- */
+
 export function getAssetTimelineSnapshot(
   assetNumber: string,
 ): AssetTimelineSnapshot | null {
@@ -698,32 +716,22 @@ export function getAssetTimelineSnapshot(
     getAssetWorkOrders(
       asset.assetCode,
     ).map(
-      (workOrder) =>
-        mapWorkOrderToTimelineEvent(
-          workOrder,
-          asset.id,
-          asset.assetCode,
-        ),
+      mapWorkOrderToTimelineEvent,
     );
 
   /*
-   * Preventive maintenance is still
-   * linked by assetNumber in the
-   * current legacy PM model.
+   * preventiveMaintenanceService
+   * will be migrated next.
    *
-   * We intentionally preserve that
-   * relationship during migration.
+   * Its current function name is still
+   * getMachineExecutions, but the data
+   * itself is already Asset-native.
    */
   const maintenanceEvents =
     getMachineExecutions(
       asset.assetNumber,
     ).map(
-      (execution) =>
-        mapMaintenanceToTimelineEvent(
-          execution,
-          asset.id,
-          asset.assetCode,
-        ),
+      mapMaintenanceToTimelineEvent,
     );
 
   const events = [

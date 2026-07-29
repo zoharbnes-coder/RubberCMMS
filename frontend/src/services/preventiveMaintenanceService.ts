@@ -1,229 +1,604 @@
 import type {
-  MachineMaintenanceSummary,
+  AssetMaintenanceSummary,
   PreventiveMaintenanceExecution,
   PreventiveMaintenancePlan,
 } from "../types/preventiveMaintenance";
 
-const STORAGE_KEY =
-  "rubbercmms_preventive_plans";
+import {
+  getAssetById,
+} from "./assetRepository";
 
-const EXECUTION_KEY =
-  "rubbercmms_preventive_executions";
+/*
+ * RubberMIP
+ * Asset-native Preventive Maintenance Service
+ *
+ * Asset is the single source of truth.
+ *
+ * PM Plans and PM Executions are linked by:
+ *
+ * assetId
+ *
+ * Legacy Machine-based PM storage is
+ * intentionally not migrated.
+ */
 
-/* ------------------------------- */
-/* Storage                         */
-/* ------------------------------- */
+const PLAN_STORAGE_KEY =
+  "rubbermip_preventive_plans_v2";
 
-function loadPlans(): PreventiveMaintenancePlan[] {
-  const raw = localStorage.getItem(STORAGE_KEY);
+const EXECUTION_STORAGE_KEY =
+  "rubbermip_preventive_executions_v2";
+
+const DAY_IN_MILLISECONDS =
+  24 * 60 * 60 * 1000;
+
+/* -------------------------------- */
+/* Storage                          */
+/* -------------------------------- */
+
+function loadPlans():
+  PreventiveMaintenancePlan[] {
+  const raw =
+    localStorage.getItem(
+      PLAN_STORAGE_KEY,
+    );
 
   if (!raw) {
     return [];
   }
 
   try {
-    return JSON.parse(raw);
+    const parsed =
+      JSON.parse(raw);
+
+    if (
+      !Array.isArray(parsed)
+    ) {
+      return [];
+    }
+
+    return parsed as PreventiveMaintenancePlan[];
   } catch {
     return [];
   }
 }
 
 function savePlans(
-  plans: PreventiveMaintenancePlan[]
-) {
+  plans:
+    PreventiveMaintenancePlan[],
+): void {
   localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(plans)
+    PLAN_STORAGE_KEY,
+    JSON.stringify(
+      plans,
+    ),
   );
 }
 
-function loadExecutions(): PreventiveMaintenanceExecution[] {
+function loadExecutions():
+  PreventiveMaintenanceExecution[] {
   const raw =
-    localStorage.getItem(EXECUTION_KEY);
+    localStorage.getItem(
+      EXECUTION_STORAGE_KEY,
+    );
 
   if (!raw) {
     return [];
   }
 
   try {
-    return JSON.parse(raw);
+    const parsed =
+      JSON.parse(raw);
+
+    if (
+      !Array.isArray(parsed)
+    ) {
+      return [];
+    }
+
+    return parsed as PreventiveMaintenanceExecution[];
   } catch {
     return [];
   }
 }
 
 function saveExecutions(
-  executions: PreventiveMaintenanceExecution[]
-) {
+  executions:
+    PreventiveMaintenanceExecution[],
+): void {
   localStorage.setItem(
-    EXECUTION_KEY,
-    JSON.stringify(executions)
+    EXECUTION_STORAGE_KEY,
+    JSON.stringify(
+      executions,
+    ),
   );
 }
 
-/* ------------------------------- */
-/* Plans                           */
-/* ------------------------------- */
+/* -------------------------------- */
+/* Date helpers                     */
+/* -------------------------------- */
 
-export function getPreventivePlans() {
+function getDateTime(
+  value:
+    string | null,
+): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const time =
+    new Date(
+      value,
+    ).getTime();
+
+  if (
+    Number.isNaN(time)
+  ) {
+    return null;
+  }
+
+  return time;
+}
+
+function isCompletedWithinLastDays(
+  execution:
+    PreventiveMaintenanceExecution,
+  days: number,
+): boolean {
+  if (
+    execution.status !==
+      "completed" ||
+    !execution.completedAt
+  ) {
+    return false;
+  }
+
+  const completedTime =
+    getDateTime(
+      execution.completedAt,
+    );
+
+  if (
+    completedTime === null
+  ) {
+    return false;
+  }
+
+  const minimumTime =
+    Date.now() -
+    days *
+      DAY_IN_MILLISECONDS;
+
+  return (
+    completedTime >=
+    minimumTime
+  );
+}
+
+function isExecutionOverdue(
+  execution:
+    PreventiveMaintenanceExecution,
+): boolean {
+  if (
+    execution.status ===
+      "completed" ||
+    execution.status ===
+      "cancelled"
+  ) {
+    return false;
+  }
+
+  if (
+    execution.status ===
+    "overdue"
+  ) {
+    return true;
+  }
+
+  const dueTime =
+    getDateTime(
+      execution.dueAt,
+    );
+
+  if (
+    dueTime === null
+  ) {
+    return false;
+  }
+
+  return (
+    dueTime <
+    Date.now()
+  );
+}
+
+/* -------------------------------- */
+/* Plans                            */
+/* -------------------------------- */
+
+export function getPreventivePlans():
+  PreventiveMaintenancePlan[] {
   return loadPlans();
 }
 
-export function getMachinePlans(
-  assetNumber: string
-) {
-  return loadPlans().filter(
+export function getAssetPlans(
+  assetId: string,
+): PreventiveMaintenancePlan[] {
+  return loadPlans()
+    .filter(
+      (plan) =>
+        plan.assetId ===
+        assetId,
+    )
+    .sort(
+      (
+        first,
+        second,
+      ) => {
+        const firstDueTime =
+          getDateTime(
+            first.nextDueAt,
+          ) ??
+          Number.MAX_SAFE_INTEGER;
+
+        const secondDueTime =
+          getDateTime(
+            second.nextDueAt,
+          ) ??
+          Number.MAX_SAFE_INTEGER;
+
+        return (
+          firstDueTime -
+          secondDueTime
+        );
+      },
+    );
+}
+
+export function getPreventivePlanById(
+  planId: string,
+):
+  | PreventiveMaintenancePlan
+  | undefined {
+  return loadPlans().find(
     (plan) =>
-      plan.assetNumber === assetNumber
+      plan.id ===
+      planId,
   );
 }
 
 export function savePreventivePlan(
-  plan: PreventiveMaintenancePlan
-) {
-  const plans = loadPlans();
+  plan:
+    PreventiveMaintenancePlan,
+): PreventiveMaintenancePlan {
+  const plans =
+    loadPlans();
 
-  const index = plans.findIndex(
-    (item) => item.id === plan.id
-  );
+  const index =
+    plans.findIndex(
+      (item) =>
+        item.id ===
+        plan.id,
+    );
 
-  if (index >= 0) {
-    plans[index] = plan;
+  const updatedPlan = {
+    ...plan,
+
+    updatedAt:
+      new Date().toISOString(),
+  };
+
+  if (
+    index >= 0
+  ) {
+    plans[index] =
+      updatedPlan;
   } else {
-    plans.push(plan);
+    plans.push(
+      updatedPlan,
+    );
   }
 
-  savePlans(plans);
+  savePlans(
+    plans,
+  );
+
+  return updatedPlan;
 }
 
-/* ------------------------------- */
-/* Executions                      */
-/* ------------------------------- */
+export function deletePreventivePlan(
+  planId: string,
+): boolean {
+  const plans =
+    loadPlans();
 
-export function getExecutions() {
+  const filteredPlans =
+    plans.filter(
+      (plan) =>
+        plan.id !==
+        planId,
+    );
+
+  if (
+    filteredPlans.length ===
+    plans.length
+  ) {
+    return false;
+  }
+
+  savePlans(
+    filteredPlans,
+  );
+
+  return true;
+}
+
+/* -------------------------------- */
+/* Executions                       */
+/* -------------------------------- */
+
+export function getPreventiveExecutions():
+  PreventiveMaintenanceExecution[] {
   return loadExecutions();
 }
 
-export function getMachineExecutions(
-  assetNumber: string
-) {
-  return loadExecutions().filter(
+export function getAssetExecutions(
+  assetId: string,
+): PreventiveMaintenanceExecution[] {
+  return loadExecutions()
+    .filter(
+      (execution) =>
+        execution.assetId ===
+        assetId,
+    )
+    .sort(
+      (
+        first,
+        second,
+      ) => {
+        const firstDueTime =
+          getDateTime(
+            first.dueAt,
+          ) ?? 0;
+
+        const secondDueTime =
+          getDateTime(
+            second.dueAt,
+          ) ?? 0;
+
+        return (
+          firstDueTime -
+          secondDueTime
+        );
+      },
+    );
+}
+
+export function getPreventiveExecutionById(
+  executionId: string,
+):
+  | PreventiveMaintenanceExecution
+  | undefined {
+  return loadExecutions().find(
     (execution) =>
-      execution.assetNumber ===
-      assetNumber
+      execution.id ===
+      executionId,
   );
 }
 
 export function saveExecution(
-  execution: PreventiveMaintenanceExecution
-) {
+  execution:
+    PreventiveMaintenanceExecution,
+): PreventiveMaintenanceExecution {
   const executions =
     loadExecutions();
 
   const index =
     executions.findIndex(
       (item) =>
-        item.id === execution.id
+        item.id ===
+        execution.id,
     );
 
-  if (index >= 0) {
-    executions[index] = execution;
+  const updatedExecution = {
+    ...execution,
+
+    updatedAt:
+      new Date().toISOString(),
+  };
+
+  if (
+    index >= 0
+  ) {
+    executions[index] =
+      updatedExecution;
   } else {
-    executions.push(execution);
+    executions.push(
+      updatedExecution,
+    );
   }
 
-  saveExecutions(executions);
+  saveExecutions(
+    executions,
+  );
+
+  return updatedExecution;
 }
 
-/* ------------------------------- */
-/* Dashboard                       */
-/* ------------------------------- */
+export function deleteExecution(
+  executionId: string,
+): boolean {
+  const executions =
+    loadExecutions();
 
-export function getMachineMaintenanceSummary(
-  assetNumber: string
-): MachineMaintenanceSummary {
+  const filteredExecutions =
+    executions.filter(
+      (execution) =>
+        execution.id !==
+        executionId,
+    );
+
+  if (
+    filteredExecutions.length ===
+    executions.length
+  ) {
+    return false;
+  }
+
+  saveExecutions(
+    filteredExecutions,
+  );
+
+  return true;
+}
+
+/* -------------------------------- */
+/* Asset Maintenance Summary        */
+/* -------------------------------- */
+
+export function getAssetMaintenanceSummary(
+  assetId: string,
+): AssetMaintenanceSummary | null {
+  const asset =
+    getAssetById(
+      assetId,
+    );
+
+  if (!asset) {
+    return null;
+  }
+
   const plans =
-    getMachinePlans(assetNumber);
+    getAssetPlans(
+      assetId,
+    );
 
   const executions =
-    getMachineExecutions(assetNumber);
+    getAssetExecutions(
+      assetId,
+    );
+
+  const activeExecutions =
+    executions.filter(
+      (execution) =>
+        execution.status !==
+          "completed" &&
+        execution.status !==
+          "cancelled",
+    );
 
   const nextExecution =
-    executions
+    activeExecutions
       .filter(
-        (item) =>
-          item.status === "upcoming" ||
-          item.status === "due" ||
-          item.status === "overdue"
+        (execution) =>
+          execution.status ===
+            "upcoming" ||
+          execution.status ===
+            "due" ||
+          execution.status ===
+            "overdue",
       )
-      .sort((a, b) =>
-        a.dueAt.localeCompare(
-          b.dueAt
-        )
-      )[0] ?? null;
+      .sort(
+        (
+          first,
+          second,
+        ) => {
+          const firstDueTime =
+            getDateTime(
+              first.dueAt,
+            ) ??
+            Number.MAX_SAFE_INTEGER;
+
+          const secondDueTime =
+            getDateTime(
+              second.dueAt,
+            ) ??
+            Number.MAX_SAFE_INTEGER;
+
+          return (
+            firstDueTime -
+            secondDueTime
+          );
+        },
+      )[0] ??
+    null;
 
   return {
-    assetNumber,
+    assetId:
+      asset.id,
 
-    totalPlans: plans.length,
+    assetCode:
+      asset.assetCode,
+
+    assetNumber:
+      asset.assetNumber,
+
+    totalPlans:
+      plans.length,
 
     activePlans:
       plans.filter(
         (plan) =>
-          plan.status === "active"
+          plan.status ===
+          "active",
       ).length,
 
     upcomingExecutions:
       executions.filter(
         (execution) =>
           execution.status ===
-          "upcoming"
+          "upcoming",
       ).length,
 
     dueExecutions:
       executions.filter(
         (execution) =>
           execution.status ===
-          "due"
+            "due" &&
+          !isExecutionOverdue(
+            execution,
+          ),
       ).length,
 
     overdueExecutions:
       executions.filter(
-        (execution) =>
-          execution.status ===
-          "overdue"
+        isExecutionOverdue,
       ).length,
 
     inProgressExecutions:
       executions.filter(
         (execution) =>
           execution.status ===
-          "in_progress"
+          "in_progress",
       ).length,
 
     completedLast30Days:
       executions.filter(
         (execution) =>
-          execution.status ===
-          "completed"
+          isCompletedWithinLastDays(
+            execution,
+            30,
+          ),
       ).length,
 
     nextExecution,
   };
 }
 
-/* ------------------------------- */
-/* Helpers                         */
-/* ------------------------------- */
+/* -------------------------------- */
+/* Number generation                */
+/* -------------------------------- */
 
-export function generatePlanNumber() {
+export function generatePlanNumber():
+  string {
   return `PM-${Date.now()}`;
 }
 
-export function generateExecutionNumber() {
+export function generateExecutionNumber():
+  string {
   return `PMWO-${Date.now()}`;
 }
 
-export function generateId() {
+export function generateId():
+  string {
   return crypto.randomUUID();
 }

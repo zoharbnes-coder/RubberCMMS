@@ -9,12 +9,16 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { useState } from "react";
 
-import type { AppUser } from "../../data/users";
+import type {
+  AppUser,
+} from "../../data/users";
+
 import type {
   WorkOrder,
   WorkOrderPriority,
   WorkOrderStatus,
 } from "../../types/workOrder";
+
 import {
   getDowntime,
   getOpenTime,
@@ -27,18 +31,36 @@ import WorkOrderActions from "./WorkOrderActions";
 
 type WorkOrderDrawerProps = {
   open: boolean;
-  workOrder: WorkOrder | null;
-  currentUser: AppUser;
-  onClose: () => void;
-  onUpdated: (updatedWorkOrder: WorkOrder) => void;
+
+  workOrder:
+    WorkOrder | null;
+
+  currentUser:
+    AppUser;
+
+  onClose:
+    () => void;
+
+  onUpdated:
+    (
+      updatedWorkOrder:
+        WorkOrder,
+    ) => void;
 };
 
-function getStatusLabel(status: WorkOrderStatus) {
-  if (status === "paused") {
+function getStatusLabel(
+  status:
+    WorkOrderStatus,
+) {
+  if (
+    status === "paused"
+  ) {
     return "מושהה";
   }
 
-  if (status === "closed") {
+  if (
+    status === "closed"
+  ) {
     return "סגור";
   }
 
@@ -46,57 +68,94 @@ function getStatusLabel(status: WorkOrderStatus) {
 }
 
 function getStatusColor(
-  status: WorkOrderStatus
-): "info" | "warning" | "success" {
-  if (status === "paused") {
+  status:
+    WorkOrderStatus,
+):
+  | "info"
+  | "warning"
+  | "success" {
+  if (
+    status === "paused"
+  ) {
     return "warning";
   }
 
-  if (status === "closed") {
+  if (
+    status === "closed"
+  ) {
     return "success";
   }
 
   return "info";
 }
 
-function getPriorityLabel(priority: WorkOrderPriority) {
-  if (priority === "high") {
+function getPriorityLabel(
+  priority:
+    WorkOrderPriority,
+) {
+  if (
+    priority === "high"
+  ) {
     return "גבוהה";
   }
 
-  if (priority === "low") {
+  if (
+    priority === "low"
+  ) {
     return "נמוכה";
   }
 
   return "בינונית";
 }
 
-function getPriorityColor(priority: WorkOrderPriority) {
-  if (priority === "high") {
+function getPriorityColor(
+  priority:
+    WorkOrderPriority,
+) {
+  if (
+    priority === "high"
+  ) {
     return "#DC2626";
   }
 
-  if (priority === "low") {
+  if (
+    priority === "low"
+  ) {
     return "#16A34A";
   }
 
   return "#F59E0B";
 }
 
-function formatDate(value: string | null) {
+function formatDate(
+  value:
+    string | null,
+) {
   if (!value) {
     return "-";
   }
 
-  return new Intl.DateTimeFormat("he-IL", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(
+    "he-IL",
+    {
+      dateStyle:
+        "short",
+
+      timeStyle:
+        "short",
+    },
+  ).format(
+    new Date(
+      value,
+    ),
+  );
 }
 
 type MetricCardProps = {
   label: string;
+
   value: string;
+
   color?: string;
 };
 
@@ -109,17 +168,28 @@ function MetricCard({
     <Box
       sx={{
         p: 2,
-        borderRadius: 3,
-        bgcolor: "#F8FAFC",
-        border: "1px solid #E2E8F0",
+
+        borderRadius:
+          3,
+
+        bgcolor:
+          "#F8FAFC",
+
+        border:
+          "1px solid #E2E8F0",
       }}
     >
       <Typography
         component="div"
         sx={{
-          color: "text.secondary",
-          fontSize: 13,
-          mb: 0.5,
+          color:
+            "text.secondary",
+
+          fontSize:
+            13,
+
+          mb:
+            0.5,
         }}
       >
         {label}
@@ -128,8 +198,12 @@ function MetricCard({
       <Typography
         component="div"
         sx={{
-          fontWeight: 900,
-          fontSize: 20,
+          fontWeight:
+            900,
+
+          fontSize:
+            20,
+
           color,
         }}
       >
@@ -146,43 +220,77 @@ export default function WorkOrderDrawer({
   onClose,
   onUpdated,
 }: WorkOrderDrawerProps) {
-  const [showCloseForm, setShowCloseForm] = useState(false);
+  const [
+    showCloseForm,
+    setShowCloseForm,
+  ] =
+    useState(false);
 
   function handleDrawerClose() {
-    setShowCloseForm(false);
+    setShowCloseForm(
+      false,
+    );
+
     onClose();
   }
 
-  function handleUpdated(updatedWorkOrder: WorkOrder) {
-    onUpdated(updatedWorkOrder);
+  function handleUpdated(
+    updatedWorkOrder:
+      WorkOrder,
+  ) {
+    onUpdated(
+      updatedWorkOrder,
+    );
   }
 
-  function handleClosed(updatedWorkOrder: WorkOrder) {
-    onUpdated(updatedWorkOrder);
-    setShowCloseForm(false);
+  function handleClosed(
+    updatedWorkOrder:
+      WorkOrder,
+  ) {
+    onUpdated(
+      updatedWorkOrder,
+    );
+
+    setShowCloseForm(
+      false,
+    );
   }
 
-  const responseTime = workOrder
-    ? getResponseTime(workOrder)
-    : null;
+  const responseTime =
+    workOrder
+      ? getResponseTime(
+          workOrder,
+        )
+      : null;
 
-  const repairTime = workOrder
-    ? getRepairTime(workOrder)
-    : null;
+  const repairTime =
+    workOrder
+      ? getRepairTime(
+          workOrder,
+        )
+      : null;
 
-  const downtime = workOrder
-    ? getDowntime(workOrder)
-    : null;
+  const downtime =
+    workOrder
+      ? getDowntime(
+          workOrder,
+        )
+      : null;
 
-  const openTime = workOrder
-    ? getOpenTime(workOrder)
-    : null;
+  const openTime =
+    workOrder
+      ? getOpenTime(
+          workOrder,
+        )
+      : null;
 
   return (
     <Drawer
       anchor="left"
       open={open}
-      onClose={handleDrawerClose}
+      onClose={
+        handleDrawerClose
+      }
       slotProps={{
         paper: {
           sx: {
@@ -191,8 +299,12 @@ export default function WorkOrderDrawer({
               sm: 560,
               md: 720,
             },
-            maxWidth: "100%",
-            bgcolor: "background.default",
+
+            maxWidth:
+              "100%",
+
+            bgcolor:
+              "background.default",
           },
         },
       }}
@@ -209,11 +321,20 @@ export default function WorkOrderDrawer({
         >
           <Box
             sx={{
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              gap: 2,
-              mb: 2,
+              display:
+                "flex",
+
+              alignItems:
+                "flex-start",
+
+              justifyContent:
+                "space-between",
+
+              gap:
+                2,
+
+              mb:
+                2,
             }}
           >
             <Box>
@@ -221,26 +342,40 @@ export default function WorkOrderDrawer({
                 component="h2"
                 variant="h5"
                 sx={{
-                  fontWeight: 900,
-                  mb: 0.5,
+                  fontWeight:
+                    900,
+
+                  mb:
+                    0.5,
                 }}
               >
-                קריאה {workOrder.workOrderNumber}
+                קריאה{" "}
+                {
+                  workOrder.workOrderNumber
+                }
               </Typography>
 
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
+                  color:
+                    "text.secondary",
                 }}
               >
-                {workOrder.machineDisplayNumber} -{" "}
-                {workOrder.machineName}
+                {
+                  workOrder.assetNumber
+                }{" "}
+                -{" "}
+                {
+                  workOrder.assetName
+                }
               </Typography>
             </Box>
 
             <IconButton
-              onClick={handleDrawerClose}
+              onClick={
+                handleDrawerClose
+              }
               aria-label="סגירת חלון הקריאה"
             >
               <CloseIcon />
@@ -249,28 +384,51 @@ export default function WorkOrderDrawer({
 
           <Box
             sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 1,
-              mb: 3,
+              display:
+                "flex",
+
+              flexWrap:
+                "wrap",
+
+              gap:
+                1,
+
+              mb:
+                3,
             }}
           >
             <Chip
-              label={getStatusLabel(workOrder.status)}
-              color={getStatusColor(workOrder.status)}
+              label={getStatusLabel(
+                workOrder.status,
+              )}
+              color={getStatusColor(
+                workOrder.status,
+              )}
             />
 
             <Chip
-              label={getPriorityLabel(workOrder.priority)}
+              label={getPriorityLabel(
+                workOrder.priority,
+              )}
               sx={{
-                bgcolor: getPriorityColor(workOrder.priority),
-                color: "white",
-                fontWeight: 900,
+                bgcolor:
+                  getPriorityColor(
+                    workOrder.priority,
+                  ),
+
+                color:
+                  "white",
+
+                fontWeight:
+                  900,
               }}
             />
 
             {workOrder.isDowntime && (
-              <Chip label="משביתה" color="error" />
+              <Chip
+                label="משביתה"
+                color="error"
+              />
             )}
 
             {workOrder.openedWhileAnotherCallWasOpen && (
@@ -283,21 +441,33 @@ export default function WorkOrderDrawer({
 
           <Box
             sx={{
-              display: "grid",
+              display:
+                "grid",
+
               gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, minmax(0, 1fr))",
+                xs:
+                  "1fr",
+
+                sm:
+                  "repeat(2, minmax(0, 1fr))",
               },
-              gap: 2,
-              mb: 3,
+
+              gap:
+                2,
+
+              mb:
+                3,
             }}
           >
             <Box>
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 מחלקה
@@ -305,28 +475,14 @@ export default function WorkOrderDrawer({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
-              >
-                {workOrder.department}
-              </Typography>
-            </Box>
-
-            <Box>
-              <Typography
-                component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  fontWeight:
+                    900,
                 }}
               >
-                קוד מכונה
-              </Typography>
-
-              <Typography
-                component="div"
-                sx={{ fontWeight: 900 }}
-              >
-                {workOrder.machineCode}
+                {
+                  workOrder.department
+                }
               </Typography>
             </Box>
 
@@ -334,8 +490,38 @@ export default function WorkOrderDrawer({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
+                }}
+              >
+                קוד נכס
+              </Typography>
+
+              <Typography
+                component="div"
+                sx={{
+                  fontWeight:
+                    900,
+                }}
+              >
+                {
+                  workOrder.assetCode
+                }
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography
+                component="div"
+                sx={{
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 נפתחה בתאריך
@@ -343,9 +529,14 @@ export default function WorkOrderDrawer({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {formatDate(workOrder.openedAt)}
+                {formatDate(
+                  workOrder.openedAt,
+                )}
               </Typography>
             </Box>
 
@@ -353,8 +544,11 @@ export default function WorkOrderDrawer({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 נפתחה על ידי
@@ -362,9 +556,14 @@ export default function WorkOrderDrawer({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {workOrder.openedBy}
+                {
+                  workOrder.openedBy
+                }
               </Typography>
             </Box>
 
@@ -372,8 +571,11 @@ export default function WorkOrderDrawer({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 התחלת טיפול
@@ -381,9 +583,14 @@ export default function WorkOrderDrawer({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {formatDate(workOrder.takenAt)}
+                {formatDate(
+                  workOrder.takenAt,
+                )}
               </Typography>
             </Box>
 
@@ -391,8 +598,11 @@ export default function WorkOrderDrawer({
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 מטפל
@@ -400,9 +610,15 @@ export default function WorkOrderDrawer({
 
               <Typography
                 component="div"
-                sx={{ fontWeight: 900 }}
+                sx={{
+                  fontWeight:
+                    900,
+                }}
               >
-                {workOrder.takenBy ?? "-"}
+                {
+                  workOrder.takenBy ??
+                  "-"
+                }
               </Typography>
             </Box>
           </Box>
@@ -411,8 +627,11 @@ export default function WorkOrderDrawer({
             component="h3"
             variant="h6"
             sx={{
-              fontWeight: 900,
-              mb: 1.5,
+              fontWeight:
+                900,
+
+              mb:
+                1.5,
             }}
           >
             מדדי זמן
@@ -420,22 +639,35 @@ export default function WorkOrderDrawer({
 
           <Box
             sx={{
-              display: "grid",
+              display:
+                "grid",
+
               gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, minmax(0, 1fr))",
+                xs:
+                  "1fr",
+
+                sm:
+                  "repeat(2, minmax(0, 1fr))",
               },
-              gap: 1.5,
-              mb: 3,
+
+              gap:
+                1.5,
+
+              mb:
+                3,
             }}
           >
             <MetricCard
               label={
-                workOrder.status === "closed"
+                workOrder.status ===
+                "closed"
                   ? "זמן כולל עד סגירה"
                   : "זמן פתוח"
               }
-              value={openTime?.display ?? "00:00"}
+              value={
+                openTime?.display ??
+                "00:00"
+              }
             />
 
             <MetricCard
@@ -445,7 +677,9 @@ export default function WorkOrderDrawer({
                 "טרם נלקחה לטיפול"
               }
               color={
-                responseTime ? "#2563EB" : "#64748B"
+                responseTime
+                  ? "#2563EB"
+                  : "#64748B"
               }
             />
 
@@ -456,7 +690,9 @@ export default function WorkOrderDrawer({
                 "הטיפול טרם התחיל"
               }
               color={
-                repairTime ? "#7C3AED" : "#64748B"
+                repairTime
+                  ? "#7C3AED"
+                  : "#64748B"
               }
             />
 
@@ -464,7 +700,8 @@ export default function WorkOrderDrawer({
               label="זמן השבתה"
               value={
                 workOrder.isDowntime
-                  ? downtime?.display ?? "00:00"
+                  ? downtime?.display ??
+                    "00:00"
                   : "לא משביתה"
               }
               color={
@@ -475,14 +712,22 @@ export default function WorkOrderDrawer({
             />
           </Box>
 
-          <Divider sx={{ mb: 3 }} />
+          <Divider
+            sx={{
+              mb:
+                3,
+            }}
+          />
 
           <Typography
             component="h3"
             variant="h6"
             sx={{
-              fontWeight: 900,
-              mb: 1,
+              fontWeight:
+                900,
+
+              mb:
+                1,
             }}
           >
             תיאור התקלה
@@ -491,23 +736,37 @@ export default function WorkOrderDrawer({
           <Typography
             component="p"
             sx={{
-              whiteSpace: "pre-wrap",
-              mb: 3,
+              whiteSpace:
+                "pre-wrap",
+
+              mb:
+                3,
             }}
           >
-            {workOrder.faultDescription}
+            {
+              workOrder.faultDescription
+            }
           </Typography>
 
-          {workOrder.status === "closed" && (
+          {workOrder.status ===
+            "closed" && (
             <>
-              <Divider sx={{ mb: 3 }} />
+              <Divider
+                sx={{
+                  mb:
+                    3,
+                }}
+              />
 
               <Typography
                 component="h3"
                 variant="h6"
                 sx={{
-                  fontWeight: 900,
-                  mb: 1,
+                  fontWeight:
+                    900,
+
+                  mb:
+                    1,
                 }}
               >
                 תיאור הטיפול
@@ -516,44 +775,66 @@ export default function WorkOrderDrawer({
               <Typography
                 component="p"
                 sx={{
-                  whiteSpace: "pre-wrap",
-                  mb: 2,
+                  whiteSpace:
+                    "pre-wrap",
+
+                  mb:
+                    2,
                 }}
               >
-                {workOrder.repairDescription}
+                {
+                  workOrder.repairDescription
+                }
               </Typography>
 
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
                 }}
               >
                 נסגרה על ידי:{" "}
-                {workOrder.closedBy ?? "-"}
+                {
+                  workOrder.closedBy ??
+                  "-"
+                }
               </Typography>
 
               <Typography
                 component="div"
                 sx={{
-                  color: "text.secondary",
-                  fontSize: 13,
-                  mb: 3,
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    13,
+
+                  mb:
+                    3,
                 }}
               >
                 מועד סגירה:{" "}
-                {formatDate(workOrder.closedAt)}
+                {formatDate(
+                  workOrder.closedAt,
+                )}
               </Typography>
 
-              {workOrder.replacedParts.length > 0 && (
+              {workOrder.replacedParts.length >
+                0 && (
                 <Box>
                   <Typography
                     component="h3"
                     variant="h6"
                     sx={{
-                      fontWeight: 900,
-                      mb: 1.5,
+                      fontWeight:
+                        900,
+
+                      mb:
+                        1.5,
                     }}
                   >
                     חלקים שהוחלפו
@@ -561,18 +842,31 @@ export default function WorkOrderDrawer({
 
                   <Box
                     sx={{
-                      display: "grid",
-                      gap: 1,
+                      display:
+                        "grid",
+
+                      gap:
+                        1,
                     }}
                   >
                     {workOrder.replacedParts.map(
-                      (part) => (
+                      (
+                        part,
+                      ) => (
                         <Box
-                          key={part.id}
+                          key={
+                            part.id
+                          }
                           sx={{
-                            p: 1.5,
-                            borderRadius: 3,
-                            bgcolor: "#F8FAFC",
+                            p:
+                              1.5,
+
+                            borderRadius:
+                              3,
+
+                            bgcolor:
+                              "#F8FAFC",
+
                             border:
                               "1px solid #E2E8F0",
                           }}
@@ -580,11 +874,17 @@ export default function WorkOrderDrawer({
                           <Typography
                             component="div"
                             sx={{
-                              fontWeight: 900,
+                              fontWeight:
+                                900,
                             }}
                           >
-                            {part.itemCode} -{" "}
-                            {part.description}
+                            {
+                              part.itemCode
+                            }{" "}
+                            -{" "}
+                            {
+                              part.description
+                            }
                           </Typography>
 
                           <Typography
@@ -592,13 +892,18 @@ export default function WorkOrderDrawer({
                             sx={{
                               color:
                                 "text.secondary",
-                              fontSize: 13,
+
+                              fontSize:
+                                13,
                             }}
                           >
-                            כמות: {part.quantity}
+                            כמות:{" "}
+                            {
+                              part.quantity
+                            }
                           </Typography>
                         </Box>
-                      )
+                      ),
                     )}
                   </Box>
                 </Box>
@@ -606,25 +911,47 @@ export default function WorkOrderDrawer({
             </>
           )}
 
-          <Divider sx={{ my: 3 }} />
+          <Divider
+            sx={{
+              my:
+                3,
+            }}
+          />
 
           <WorkOrderActions
-            workOrder={workOrder}
-            currentUser={currentUser}
-            onUpdated={handleUpdated}
+            workOrder={
+              workOrder
+            }
+            currentUser={
+              currentUser
+            }
+            onUpdated={
+              handleUpdated
+            }
             onRequestClose={() =>
-              setShowCloseForm(true)
+              setShowCloseForm(
+                true,
+              )
             }
           />
 
           {showCloseForm &&
-            workOrder.status !== "closed" && (
+            workOrder.status !==
+              "closed" && (
               <CloseWorkOrderForm
-                workOrder={workOrder}
-                currentUser={currentUser}
-                onClosed={handleClosed}
+                workOrder={
+                  workOrder
+                }
+                currentUser={
+                  currentUser
+                }
+                onClosed={
+                  handleClosed
+                }
                 onCancel={() =>
-                  setShowCloseForm(false)
+                  setShowCloseForm(
+                    false,
+                  )
                 }
               />
             )}

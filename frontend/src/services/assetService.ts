@@ -18,6 +18,21 @@ import {
   getWorkOrders,
 } from "./workOrderService";
 
+/*
+ * RubberMIP
+ * Asset Operational Service
+ *
+ * Asset is the single source of truth
+ * for equipment identity.
+ *
+ * Work Orders are linked directly by:
+ *
+ * WorkOrder.assetCode === Asset.assetCode
+ */
+
+const PLANNED_MINUTES_PER_DAY =
+  9 * 60;
+
 export type AssetOperationalMetrics = {
   openWorkOrders: number;
 
@@ -32,31 +47,103 @@ export type AssetOperationalMetrics = {
   status: AssetStatus;
 };
 
+/* -------------------------------- */
+/* Date helpers                     */
+/* -------------------------------- */
+
+function getDateTime(
+  value: string | null,
+): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const time =
+    new Date(
+      value,
+    ).getTime();
+
+  if (
+    Number.isNaN(
+      time,
+    )
+  ) {
+    return null;
+  }
+
+  return time;
+}
+
 function getDurationMinutes(
   startValue: string | null,
   endValue: string | null,
 ): number {
-  if (!startValue || !endValue) {
-    return 0;
-  }
-
   const startTime =
-    new Date(startValue).getTime();
+    getDateTime(
+      startValue,
+    );
 
   const endTime =
-    new Date(endValue).getTime();
+    getDateTime(
+      endValue,
+    );
 
   if (
-    Number.isNaN(startTime) ||
-    Number.isNaN(endTime) ||
+    startTime === null ||
+    endTime === null ||
     endTime <= startTime
   ) {
     return 0;
   }
 
-  return Math.floor(
-    (endTime - startTime) /
-      60000,
+  return (
+    (endTime -
+      startTime) /
+    60000
+  );
+}
+
+function getStartOfToday():
+  number {
+  const now =
+    new Date();
+
+  now.setHours(
+    0,
+    0,
+    0,
+    0,
+  );
+
+  return now.getTime();
+}
+
+function getEndOfToday():
+  number {
+  const now =
+    new Date();
+
+  now.setHours(
+    23,
+    59,
+    59,
+    999,
+  );
+
+  return now.getTime();
+}
+
+/* -------------------------------- */
+/* Work Order relationship          */
+/* -------------------------------- */
+
+function belongsToAsset(
+  workOrder: WorkOrder,
+  assetCode: string,
+): boolean {
+  return (
+    workOrder.assetCode ===
+    assetCode
   );
 }
 
@@ -65,10 +152,16 @@ function getAssetWorkOrdersInternal(
 ): WorkOrder[] {
   return getWorkOrders().filter(
     (workOrder) =>
-      workOrder.machineCode ===
-      asset.assetCode,
+      belongsToAsset(
+        workOrder,
+        asset.assetCode,
+      ),
   );
 }
+
+/* -------------------------------- */
+/* Status                           */
+/* -------------------------------- */
 
 function calculateAssetStatus(
   workOrders: WorkOrder[],
@@ -76,21 +169,38 @@ function calculateAssetStatus(
   const activeWorkOrders =
     workOrders.filter(
       (workOrder) =>
-        workOrder.status !== "closed",
+        workOrder.status !==
+        "closed",
     );
 
-  const hasDowntime =
+  const hasActiveDowntime =
     activeWorkOrders.some(
       (workOrder) =>
         workOrder.isDowntime,
     );
 
-  if (hasDowntime) {
+  if (
+    hasActiveDowntime
+  ) {
     return "alarm";
   }
 
+  const hasActivePreventiveMaintenance =
+    activeWorkOrders.some(
+      (workOrder) =>
+        workOrder.type ===
+        "preventive",
+    );
+
   if (
-    activeWorkOrders.length > 0
+    hasActivePreventiveMaintenance
+  ) {
+    return "maintenance";
+  }
+
+  if (
+    activeWorkOrders.length >
+    0
   ) {
     return "warning";
   }
@@ -98,46 +208,112 @@ function calculateAssetStatus(
   return "running";
 }
 
+/* -------------------------------- */
+/* Availability                     */
+/* -------------------------------- */
+
+function getTodayDowntimeMinutes(
+  workOrder: WorkOrder,
+): number {
+  if (
+    !workOrder.isDowntime ||
+    workOrder.type !==
+      "fault"
+  ) {
+    return 0;
+  }
+
+  const openedAt =
+    getDateTime(
+      workOrder.openedAt,
+    );
+
+  if (
+    openedAt === null
+  ) {
+    return 0;
+  }
+
+  const closedAt =
+    workOrder.closedAt
+      ? getDateTime(
+          workOrder.closedAt,
+        )
+      : Date.now();
+
+  if (
+    closedAt === null
+  ) {
+    return 0;
+  }
+
+  const todayStart =
+    getStartOfToday();
+
+  const todayEnd =
+    Math.min(
+      Date.now(),
+      getEndOfToday(),
+    );
+
+  const effectiveStart =
+    Math.max(
+      openedAt,
+      todayStart,
+    );
+
+  const effectiveEnd =
+    Math.min(
+      closedAt,
+      todayEnd,
+    );
+
+  if (
+    effectiveEnd <=
+    effectiveStart
+  ) {
+    return 0;
+  }
+
+  return (
+    (effectiveEnd -
+      effectiveStart) /
+    60000
+  );
+}
+
 function calculateAvailability(
   workOrders: WorkOrder[],
 ): number {
   const downtimeMinutes =
-    workOrders
-      .filter(
-        (workOrder) =>
-          workOrder.isDowntime,
-      )
-      .reduce(
-        (total, workOrder) => {
-          const endValue =
-            workOrder.closedAt ??
-            new Date().toISOString();
+    workOrders.reduce(
+      (
+        total,
+        workOrder,
+      ) =>
+        total +
+        getTodayDowntimeMinutes(
+          workOrder,
+        ),
+      0,
+    );
 
-          return (
-            total +
-            getDurationMinutes(
-              workOrder.openedAt,
-              endValue,
-            )
-          );
-        },
-        0,
-      );
+  const cappedDowntimeMinutes =
+    Math.min(
+      PLANNED_MINUTES_PER_DAY,
+      downtimeMinutes,
+    );
 
-  /*
-   * Current plant logic:
-   * 9 planned operating hours per day.
-   *
-   * This preserves the same logic currently
-   * used by machineService.ts.
-   */
-  const plannedMinutes =
-    9 * 60;
+  const availableMinutes =
+    Math.max(
+      0,
+      PLANNED_MINUTES_PER_DAY -
+        cappedDowntimeMinutes,
+    );
 
   const availability =
-    ((plannedMinutes -
-      downtimeMinutes) /
-      plannedMinutes) *
+    (availableMinutes /
+      PLANNED_MINUTES_PER_DAY) *
     100;
 
   return Math.max(
@@ -149,45 +325,59 @@ function calculateAvailability(
   );
 }
 
+/* -------------------------------- */
+/* MTTR                             */
+/* -------------------------------- */
+
 function calculateMttrHours(
   workOrders: WorkOrder[],
 ): number {
-  const completedRepairs =
+  /*
+   * MTTR is calculated only from
+   * completed corrective fault work.
+   *
+   * PM / safety / improvement work
+   * must not distort repair-time KPI.
+   */
+  const completedFaults =
     workOrders.filter(
       (workOrder) =>
-        workOrder.takenAt !== null &&
-        workOrder.closedAt !== null,
+        workOrder.type ===
+          "fault" &&
+        workOrder.takenAt !==
+          null &&
+        workOrder.closedAt !==
+          null,
     );
 
-  if (
-    completedRepairs.length === 0
-  ) {
-    return 0;
-  }
-
   const repairDurations =
-    completedRepairs
-      .map((workOrder) =>
-        getDurationMinutes(
-          workOrder.takenAt,
-          workOrder.closedAt,
-        ),
+    completedFaults
+      .map(
+        (workOrder) =>
+          getDurationMinutes(
+            workOrder.takenAt,
+            workOrder.closedAt,
+          ),
       )
       .filter(
-        (duration) =>
-          duration > 0,
+        (minutes) =>
+          minutes >= 0,
       );
 
   if (
-    repairDurations.length === 0
+    repairDurations.length ===
+    0
   ) {
     return 0;
   }
 
   const totalRepairMinutes =
     repairDurations.reduce(
-      (total, duration) =>
-        total + duration,
+      (
+        total,
+        minutes,
+      ) =>
+        total + minutes,
       0,
     );
 
@@ -198,18 +388,38 @@ function calculateMttrHours(
   );
 }
 
+/* -------------------------------- */
+/* MTBF                             */
+/* -------------------------------- */
+
 function calculateMtbfHours(
   workOrders: WorkOrder[],
 ): number {
-  const downtimeWorkOrders =
+  /*
+   * MTBF is calculated only between
+   * completed downtime fault events.
+   *
+   * Interval:
+   *
+   * previous failure closed
+   *        ↓
+   * next failure opened
+   */
+  const downtimeFailures =
     workOrders
       .filter(
         (workOrder) =>
+          workOrder.type ===
+            "fault" &&
           workOrder.isDowntime &&
-          workOrder.closedAt !== null,
+          workOrder.closedAt !==
+            null,
       )
       .sort(
-        (first, second) =>
+        (
+          first,
+          second,
+        ) =>
           new Date(
             first.openedAt,
           ).getTime() -
@@ -219,7 +429,8 @@ function calculateMtbfHours(
       );
 
   if (
-    downtimeWorkOrders.length < 2
+    downtimeFailures.length <
+    2
   ) {
     return 0;
   }
@@ -230,68 +441,73 @@ function calculateMtbfHours(
   for (
     let index = 1;
     index <
-    downtimeWorkOrders.length;
+    downtimeFailures.length;
     index += 1
   ) {
-    const previousClosedAt =
-      downtimeWorkOrders[
+    const previousFailure =
+      downtimeFailures[
         index - 1
-      ].closedAt;
+      ];
+
+    const currentFailure =
+      downtimeFailures[
+        index
+      ];
+
+    const previousClosedAt =
+      getDateTime(
+        previousFailure.closedAt,
+      );
 
     const currentOpenedAt =
-      downtimeWorkOrders[
-        index
-      ].openedAt;
-
-    if (!previousClosedAt) {
-      continue;
-    }
-
-    const previousCloseTime =
-      new Date(
-        previousClosedAt,
-      ).getTime();
-
-    const currentOpenTime =
-      new Date(
-        currentOpenedAt,
-      ).getTime();
+      getDateTime(
+        currentFailure.openedAt,
+      );
 
     if (
-      Number.isNaN(
-        previousCloseTime,
-      ) ||
-      Number.isNaN(
-        currentOpenTime,
-      ) ||
-      currentOpenTime <=
-        previousCloseTime
+      previousClosedAt ===
+        null ||
+      currentOpenedAt ===
+        null ||
+      currentOpenedAt <=
+        previousClosedAt
     ) {
       continue;
     }
 
     intervalsHours.push(
-      (currentOpenTime -
-        previousCloseTime) /
+      (currentOpenedAt -
+        previousClosedAt) /
         3600000,
     );
   }
 
   if (
-    intervalsHours.length === 0
+    intervalsHours.length ===
+    0
   ) {
     return 0;
   }
 
-  return (
+  const totalHours =
     intervalsHours.reduce(
-      (total, value) =>
-        total + value,
+      (
+        total,
+        hours,
+      ) =>
+        total + hours,
       0,
-    ) /
+    );
+
+  return (
+    totalHours /
     intervalsHours.length
   );
 }
+
+/* -------------------------------- */
+/* Metrics                          */
+/* -------------------------------- */
 
 export function calculateAssetOperationalMetrics(
   asset: Asset,
@@ -343,6 +559,10 @@ export function calculateAssetOperationalMetrics(
   };
 }
 
+/* -------------------------------- */
+/* Asset enrichment                 */
+/* -------------------------------- */
+
 export function enrichAsset(
   asset: Asset,
 ): Asset {
@@ -374,6 +594,10 @@ export function enrichAsset(
   };
 }
 
+/* -------------------------------- */
+/* Public Asset API                 */
+/* -------------------------------- */
+
 export function getLiveAssets():
   Asset[] {
   return getActiveAssets().map(
@@ -385,26 +609,34 @@ export function getLiveAssetById(
   assetId: string,
 ): Asset | undefined {
   const asset =
-    getAssetById(assetId);
+    getAssetById(
+      assetId,
+    );
 
   if (!asset) {
     return undefined;
   }
 
-  return enrichAsset(asset);
+  return enrichAsset(
+    asset,
+  );
 }
 
 export function getLiveAssetByCode(
   assetCode: string,
 ): Asset | undefined {
   const asset =
-    getAssetByCode(assetCode);
+    getAssetByCode(
+      assetCode,
+    );
 
   if (!asset) {
     return undefined;
   }
 
-  return enrichAsset(asset);
+  return enrichAsset(
+    asset,
+  );
 }
 
 export function getLiveAssetByNumber(
@@ -419,7 +651,9 @@ export function getLiveAssetByNumber(
     return undefined;
   }
 
-  return enrichAsset(asset);
+  return enrichAsset(
+    asset,
+  );
 }
 
 export function getAssetWorkOrders(
@@ -428,11 +662,16 @@ export function getAssetWorkOrders(
   return getWorkOrders()
     .filter(
       (workOrder) =>
-        workOrder.machineCode ===
-        assetCode,
+        belongsToAsset(
+          workOrder,
+          assetCode,
+        ),
     )
     .sort(
-      (first, second) =>
+      (
+        first,
+        second,
+      ) =>
         new Date(
           second.openedAt,
         ).getTime() -
