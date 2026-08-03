@@ -1,5 +1,11 @@
-import { useState } from "react";
-import { ThemeProvider } from "@mui/material/styles";
+import {
+  useState,
+} from "react";
+
+import {
+  ThemeProvider,
+} from "@mui/material/styles";
+
 import {
   HashRouter,
   Navigate,
@@ -7,68 +13,112 @@ import {
   Routes,
 } from "react-router-dom";
 
-import { appTheme } from "./theme/theme";
-import { MainLayout } from "./layouts/MainLayout";
-import ProtectedRoute from "./auth/ProtectedRoute";
-import { getDefaultRoute } from "./auth/permissions";
+import {
+  appTheme,
+} from "./theme/theme";
 
+import {
+  MainLayout,
+} from "./layouts/MainLayout";
+
+import ProtectedRoute from "./auth/ProtectedRoute";
+
+import {
+  getDefaultRoute,
+} from "./auth/permissions";
+
+import Analytics from "./pages/Analytics";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
-import NewWorkOrder from "./pages/NewWorkOrder";
-import WorkOrders from "./pages/WorkOrders";
-import WorkOrderDetails from "./pages/WorkOrderDetails";
-import Machines from "./pages/Machines";
 import MachineDetails from "./pages/MachineDetails";
+import Machines from "./pages/Machines";
+import NewWorkOrder from "./pages/NewWorkOrder";
+import Settings from "./pages/Settings";
+import WorkOrderDetails from "./pages/WorkOrderDetails";
+import WorkOrders from "./pages/WorkOrders";
 
-import type { AppUser } from "./data/users";
+import type {
+  AppUser,
+} from "./data/users";
 
-function Analytics() {
-  return <h1>Analytics</h1>;
-}
-
+/*
+ * History remains a temporary placeholder
+ * until the full History page is implemented.
+ */
 function History() {
-  return <h1>היסטוריה</h1>;
+  return (
+    <h1>
+      היסטוריה
+    </h1>
+  );
 }
 
-function Settings() {
-  return <h1>הגדרות</h1>;
-}
-
-function getSavedUser(): AppUser | null {
-  const savedUser = localStorage.getItem("rubbercmms_user");
+function getSavedUser():
+  AppUser | null {
+  const savedUser =
+    localStorage.getItem(
+      "rubbercmms_user",
+    );
 
   if (!savedUser) {
     return null;
   }
 
   try {
-    return JSON.parse(savedUser) as AppUser;
+    return JSON.parse(
+      savedUser,
+    ) as AppUser;
   } catch {
-    localStorage.removeItem("rubbercmms_user");
+    localStorage.removeItem(
+      "rubbercmms_user",
+    );
+
     return null;
   }
 }
 
 export default function App() {
-  const [currentUser, setCurrentUser] =
-    useState<AppUser | null>(getSavedUser());
-
-  function handleLogin(user: AppUser) {
-    localStorage.setItem(
-      "rubbercmms_user",
-      JSON.stringify(user)
+  const [
+    currentUser,
+    setCurrentUser,
+  ] =
+    useState<AppUser | null>(
+      getSavedUser(),
     );
 
-    setCurrentUser(user);
+  function handleLogin(
+    user: AppUser,
+  ): void {
+    localStorage.setItem(
+      "rubbercmms_user",
+
+      JSON.stringify(
+        user,
+      ),
+    );
+
+    setCurrentUser(
+      user,
+    );
   }
 
-  function handleLogout() {
-    localStorage.removeItem("rubbercmms_user");
-    setCurrentUser(null);
+  function handleLogout():
+    void {
+    localStorage.removeItem(
+      "rubbercmms_user",
+    );
+
+    setCurrentUser(
+      null,
+    );
   }
 
   return (
-    <ThemeProvider theme={appTheme}>
+    <ThemeProvider
+      theme={
+        appTheme
+      }
+    >
       <HashRouter>
         <Routes>
           <Route
@@ -76,11 +126,17 @@ export default function App() {
             element={
               currentUser ? (
                 <Navigate
-                  to={getDefaultRoute(currentUser.role)}
+                  to={getDefaultRoute(
+                    currentUser.role,
+                  )}
                   replace
                 />
               ) : (
-                <Login onLogin={handleLogin} />
+                <Login
+                  onLogin={
+                    handleLogin
+                  }
+                />
               )
             }
           />
@@ -90,15 +146,21 @@ export default function App() {
             element={
               currentUser ? (
                 <MainLayout
-                  currentUser={currentUser}
-                  onLogout={handleLogout}
+                  currentUser={
+                    currentUser
+                  }
+                  onLogout={
+                    handleLogout
+                  }
                 >
                   <Routes>
                     <Route
                       path="/"
                       element={
                         <ProtectedRoute
-                          currentUserRole={currentUser.role}
+                          currentUserRole={
+                            currentUser.role
+                          }
                           permission="view_dashboard"
                         >
                           <Dashboard />
@@ -110,11 +172,15 @@ export default function App() {
                       path="/workorders/new"
                       element={
                         <ProtectedRoute
-                          currentUserRole={currentUser.role}
+                          currentUserRole={
+                            currentUser.role
+                          }
                           permission="open_work_order"
                         >
                           <NewWorkOrder
-                            currentUser={currentUser}
+                            currentUser={
+                              currentUser
+                            }
                           />
                         </ProtectedRoute>
                       }
@@ -124,11 +190,15 @@ export default function App() {
                       path="/workorders"
                       element={
                         <ProtectedRoute
-                          currentUserRole={currentUser.role}
+                          currentUserRole={
+                            currentUser.role
+                          }
                           permission="view_work_orders"
                         >
                           <WorkOrders
-                            currentUser={currentUser}
+                            currentUser={
+                              currentUser
+                            }
                           />
                         </ProtectedRoute>
                       }
@@ -138,11 +208,15 @@ export default function App() {
                       path="/workorders/:workOrderId"
                       element={
                         <ProtectedRoute
-                          currentUserRole={currentUser.role}
+                          currentUserRole={
+                            currentUser.role
+                          }
                           permission="view_work_orders"
                         >
                           <WorkOrderDetails
-                            currentUser={currentUser}
+                            currentUser={
+                              currentUser
+                            }
                           />
                         </ProtectedRoute>
                       }
@@ -152,7 +226,9 @@ export default function App() {
                       path="/machines"
                       element={
                         <ProtectedRoute
-                          currentUserRole={currentUser.role}
+                          currentUserRole={
+                            currentUser.role
+                          }
                           permission="view_machines"
                         >
                           <Machines />
@@ -164,7 +240,9 @@ export default function App() {
                       path="/machines/:machineCode"
                       element={
                         <ProtectedRoute
-                          currentUserRole={currentUser.role}
+                          currentUserRole={
+                            currentUser.role
+                          }
                           permission="view_machines"
                         >
                           <MachineDetails />
@@ -176,7 +254,9 @@ export default function App() {
                       path="/analytics"
                       element={
                         <ProtectedRoute
-                          currentUserRole={currentUser.role}
+                          currentUserRole={
+                            currentUser.role
+                          }
                           permission="view_analytics"
                         >
                           <Analytics />
@@ -188,7 +268,9 @@ export default function App() {
                       path="/history"
                       element={
                         <ProtectedRoute
-                          currentUserRole={currentUser.role}
+                          currentUserRole={
+                            currentUser.role
+                          }
                           permission="view_history"
                         >
                           <History />
@@ -200,7 +282,9 @@ export default function App() {
                       path="/settings"
                       element={
                         <ProtectedRoute
-                          currentUserRole={currentUser.role}
+                          currentUserRole={
+                            currentUser.role
+                          }
                           permission="manage_settings"
                         >
                           <Settings />
@@ -212,7 +296,9 @@ export default function App() {
                       path="*"
                       element={
                         <Navigate
-                          to={getDefaultRoute(currentUser.role)}
+                          to={getDefaultRoute(
+                            currentUser.role,
+                          )}
                           replace
                         />
                       }
@@ -220,7 +306,10 @@ export default function App() {
                   </Routes>
                 </MainLayout>
               ) : (
-                <Navigate to="/login" replace />
+                <Navigate
+                  to="/login"
+                  replace
+                />
               )
             }
           />
