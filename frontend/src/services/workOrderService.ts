@@ -8,20 +8,134 @@ import type {
  * RubberMIP
  * Asset-native Work Order Service
  *
- * Work Orders are now linked directly
+ * Work Orders are linked directly
  * to Asset identity:
  *
  * assetId
  * assetCode
  * assetNumber
  * assetName
- *
- * Previous Machine-centric Work Orders
- * are intentionally not migrated.
  */
 
 const STORAGE_KEY =
   "rubbermip_workorders_v2";
+
+/* -------------------------------- */
+/* ID generation                    */
+/* -------------------------------- */
+
+function generateId():
+  string {
+  const browserCrypto =
+    globalThis.crypto;
+
+  if (
+    browserCrypto &&
+    typeof browserCrypto.randomUUID ===
+      "function"
+  ) {
+    return browserCrypto.randomUUID();
+  }
+
+  if (
+    browserCrypto &&
+    typeof browserCrypto.getRandomValues ===
+      "function"
+  ) {
+    const randomValues =
+      new Uint8Array(
+        16,
+      );
+
+    browserCrypto.getRandomValues(
+      randomValues,
+    );
+
+    /*
+     * RFC 4122 version 4 UUID.
+     */
+    randomValues[6] =
+      (
+        randomValues[6] &
+        0x0f
+      ) |
+      0x40;
+
+    randomValues[8] =
+      (
+        randomValues[8] &
+        0x3f
+      ) |
+      0x80;
+
+    const hexadecimal =
+      Array.from(
+        randomValues,
+        (value) =>
+          value
+            .toString(
+              16,
+            )
+            .padStart(
+              2,
+              "0",
+            ),
+      ).join("");
+
+    return [
+      hexadecimal.slice(
+        0,
+        8,
+      ),
+
+      hexadecimal.slice(
+        8,
+        12,
+      ),
+
+      hexadecimal.slice(
+        12,
+        16,
+      ),
+
+      hexadecimal.slice(
+        16,
+        20,
+      ),
+
+      hexadecimal.slice(
+        20,
+        32,
+      ),
+    ].join("-");
+  }
+
+  /*
+   * Final compatibility fallback for
+   * browsers without Web Crypto support.
+   */
+  return [
+    Date.now().toString(
+      36,
+    ),
+
+    Math.random()
+      .toString(
+        36,
+      )
+      .slice(
+        2,
+      ),
+
+    Math.random()
+      .toString(
+        36,
+      )
+      .slice(
+        2,
+      ),
+  ].join("-");
+}
 
 /* -------------------------------- */
 /* Storage                          */
@@ -40,10 +154,14 @@ function loadWorkOrders():
 
   try {
     const parsed =
-      JSON.parse(data);
+      JSON.parse(
+        data,
+      );
 
     if (
-      !Array.isArray(parsed)
+      !Array.isArray(
+        parsed,
+      )
     ) {
       return [];
     }
@@ -55,10 +173,12 @@ function loadWorkOrders():
 }
 
 function saveWorkOrders(
-  workOrders: WorkOrder[],
+  workOrders:
+    WorkOrder[],
 ): void {
   localStorage.setItem(
     STORAGE_KEY,
+
     JSON.stringify(
       workOrders,
     ),
@@ -79,7 +199,8 @@ function generateWorkOrderNumber():
 
   const month =
     String(
-      now.getMonth() + 1,
+      now.getMonth() +
+        1,
     ).padStart(
       2,
       "0",
@@ -128,12 +249,14 @@ function generateWorkOrderNumber():
           runningNumber,
         );
       },
+
       0,
     );
 
   const nextNumber =
     String(
-      highestNumber + 1,
+      highestNumber +
+        1,
     ).padStart(
       4,
       "0",
@@ -218,10 +341,6 @@ export function createWorkOrder(
   const workOrders =
     loadWorkOrders();
 
-  /*
-   * Duplicate detection is now based
-   * on the immutable Asset ID.
-   */
   const alreadyOpen =
     workOrders.some(
       (workOrder) =>
@@ -237,7 +356,7 @@ export function createWorkOrder(
   const newWorkOrder:
     WorkOrder = {
     id:
-      crypto.randomUUID(),
+      generateId(),
 
     workOrderNumber:
       generateWorkOrderNumber(),

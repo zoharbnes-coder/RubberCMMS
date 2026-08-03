@@ -6,17 +6,33 @@ import {
   Chip,
   Typography,
 } from "@mui/material";
+
 import BuildIcon from "@mui/icons-material/Build";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PauseCircleIcon from "@mui/icons-material/PauseCircle";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  useNavigate,
+} from "react-router-dom";
 
 import KpiCard from "../components/cards/KpiCard";
 import ManagementRiskPanel from "../components/dashboard/ManagementRiskPanel";
+
+import {
+  getDashboardActivitySnapshot,
+  type DashboardActivity,
+  type DashboardActivitySeverity,
+  type DashboardActivitySnapshot,
+} from "../services/dashboardActivityService";
 
 import {
   getDashboardSnapshot,
@@ -37,13 +53,22 @@ import {
 } from "../utils/workOrderMetrics";
 
 function getPriorityLabel(
-  priority: "high" | "medium" | "low",
-) {
-  if (priority === "high") {
+  priority:
+    | "high"
+    | "medium"
+    | "low",
+): string {
+  if (
+    priority ===
+    "high"
+  ) {
     return "גבוהה";
   }
 
-  if (priority === "low") {
+  if (
+    priority ===
+    "low"
+  ) {
     return "נמוכה";
   }
 
@@ -51,13 +76,22 @@ function getPriorityLabel(
 }
 
 function getPriorityColor(
-  priority: "high" | "medium" | "low",
-) {
-  if (priority === "high") {
+  priority:
+    | "high"
+    | "medium"
+    | "low",
+): string {
+  if (
+    priority ===
+    "high"
+  ) {
     return "#DC2626";
   }
 
-  if (priority === "low") {
+  if (
+    priority ===
+    "low"
+  ) {
     return "#16A34A";
   }
 
@@ -65,17 +99,27 @@ function getPriorityColor(
 }
 
 function getAssetStatusLabel(
-  status: AssetStatus,
-) {
-  if (status === "alarm") {
+  status:
+    AssetStatus,
+): string {
+  if (
+    status ===
+    "alarm"
+  ) {
     return "מושבת";
   }
 
-  if (status === "maintenance") {
+  if (
+    status ===
+    "maintenance"
+  ) {
     return "בטיפול אחזקה";
   }
 
-  if (status === "warning") {
+  if (
+    status ===
+    "warning"
+  ) {
     return "קריאה פתוחה";
   }
 
@@ -83,35 +127,194 @@ function getAssetStatusLabel(
 }
 
 function getAssetStatusColor(
-  status: AssetStatus,
-) {
-  if (status === "alarm") {
+  status:
+    AssetStatus,
+): string {
+  if (
+    status ===
+    "alarm"
+  ) {
     return "#DC2626";
   }
 
-  if (status === "maintenance") {
+  if (
+    status ===
+    "maintenance"
+  ) {
     return "#2563EB";
   }
 
-  if (status === "warning") {
+  if (
+    status ===
+    "warning"
+  ) {
     return "#F59E0B";
   }
 
   return "#16A34A";
 }
 
+function getActivitySeverityColor(
+  severity:
+    DashboardActivitySeverity,
+): string {
+  if (
+    severity ===
+    "danger"
+  ) {
+    return "#DC2626";
+  }
+
+  if (
+    severity ===
+    "warning"
+  ) {
+    return "#D97706";
+  }
+
+  if (
+    severity ===
+    "success"
+  ) {
+    return "#16A34A";
+  }
+
+  if (
+    severity ===
+    "neutral"
+  ) {
+    return "#64748B";
+  }
+
+  return "#2563EB";
+}
+
+function getActivityChipLabel(
+  activity:
+    DashboardActivity,
+): string {
+  if (
+    activity.source ===
+    "preventive_maintenance"
+  ) {
+    return "טיפול מונע";
+  }
+
+  if (
+    activity.isDowntime
+  ) {
+    return "השבתה";
+  }
+
+  return "קריאת שירות";
+}
+
 function formatDateTime(
   value: string,
-) {
+): string {
+  const date =
+    new Date(
+      value,
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return "-";
+  }
+
   return new Intl.DateTimeFormat(
     "he-IL",
     {
-      dateStyle: "short",
-      timeStyle: "medium",
+      dateStyle:
+        "short",
+
+      timeStyle:
+        "medium",
     },
   ).format(
-    new Date(value),
+    date,
   );
+}
+
+function formatRelativeTime(
+  value: string,
+): string {
+  const eventTime =
+    new Date(
+      value,
+    ).getTime();
+
+  if (
+    Number.isNaN(
+      eventTime,
+    )
+  ) {
+    return "-";
+  }
+
+  const differenceMinutes =
+    Math.max(
+      0,
+      Math.floor(
+        (
+          Date.now() -
+          eventTime
+        ) /
+          60000,
+      ),
+    );
+
+  if (
+    differenceMinutes <
+    1
+  ) {
+    return "עכשיו";
+  }
+
+  if (
+    differenceMinutes <
+    60
+  ) {
+    return `לפני ${differenceMinutes} דקות`;
+  }
+
+  const differenceHours =
+    Math.floor(
+      differenceMinutes /
+        60,
+    );
+
+  if (
+    differenceHours <
+    24
+  ) {
+    if (
+      differenceHours ===
+      1
+    ) {
+      return "לפני שעה";
+    }
+
+    return `לפני ${differenceHours} שעות`;
+  }
+
+  const differenceDays =
+    Math.floor(
+      differenceHours /
+        24,
+    );
+
+  if (
+    differenceDays ===
+    1
+  ) {
+    return "אתמול";
+  }
+
+  return `לפני ${differenceDays} ימים`;
 }
 
 export default function Dashboard() {
@@ -127,6 +330,14 @@ export default function Dashboard() {
     );
 
   const [
+    activitySnapshot,
+    setActivitySnapshot,
+  ] =
+    useState<DashboardActivitySnapshot>(
+      getDashboardActivitySnapshot(),
+    );
+
+  const [
     managementSnapshot,
     setManagementSnapshot,
   ] =
@@ -134,9 +345,14 @@ export default function Dashboard() {
       getManagementInsightsSnapshot(),
     );
 
-  function refreshDashboard() {
+  function refreshDashboard():
+    void {
     setSnapshot(
       getDashboardSnapshot(),
+    );
+
+    setActivitySnapshot(
+      getDashboardActivitySnapshot(),
     );
 
     setManagementSnapshot(
@@ -146,7 +362,7 @@ export default function Dashboard() {
 
   function openWorkOrder(
     workOrderId: string,
-  ) {
+  ): void {
     navigate(
       `/workorders/${encodeURIComponent(
         workOrderId,
@@ -156,7 +372,7 @@ export default function Dashboard() {
 
   function openAsset(
     assetNumber: string,
-  ) {
+  ): void {
     navigate(
       `/machines/${encodeURIComponent(
         assetNumber,
@@ -164,12 +380,45 @@ export default function Dashboard() {
     );
   }
 
+  function openActivity(
+    activity:
+      DashboardActivity,
+  ): void {
+    if (
+      activity.target ===
+      "work_order"
+    ) {
+      navigate(
+        `/workorders/${encodeURIComponent(
+          activity.targetId,
+        )}`,
+      );
+
+      return;
+    }
+
+    if (
+      activity.target ===
+      "maintenance"
+    ) {
+      navigate(
+        `/maintenance?assetId=${encodeURIComponent(
+          activity.assetId,
+        )}`,
+      );
+
+      return;
+    }
+
+    openAsset(
+      activity.assetNumber,
+    );
+  }
+
   useEffect(() => {
     const refreshInterval =
       window.setInterval(
-        () => {
-          refreshDashboard();
-        },
+        refreshDashboard,
         10000,
       );
 
@@ -181,37 +430,40 @@ export default function Dashboard() {
   }, []);
 
   const assetsByDepartment =
-    useMemo(() => {
-      const grouped =
-        new Map<
-          string,
-          DashboardSnapshot["assetStatuses"]
-        >();
+    useMemo(
+      () => {
+        const grouped =
+          new Map<
+            string,
+            DashboardSnapshot["assetStatuses"]
+          >();
 
-      snapshot.assetStatuses.forEach(
-        (asset) => {
-          const departmentAssets =
-            grouped.get(
+        snapshot.assetStatuses.forEach(
+          (asset) => {
+            const departmentAssets =
+              grouped.get(
+                asset.department,
+              ) ?? [];
+
+            departmentAssets.push(
+              asset,
+            );
+
+            grouped.set(
               asset.department,
-            ) ?? [];
+              departmentAssets,
+            );
+          },
+        );
 
-          departmentAssets.push(
-            asset,
-          );
-
-          grouped.set(
-            asset.department,
-            departmentAssets,
-          );
-        },
-      );
-
-      return Array.from(
-        grouped.entries(),
-      );
-    }, [
-      snapshot.assetStatuses,
-    ]);
+        return Array.from(
+          grouped.entries(),
+        );
+      },
+      [
+        snapshot.assetStatuses,
+      ],
+    );
 
   const stats = [
     {
@@ -321,23 +573,33 @@ export default function Dashboard() {
     <Box dir="rtl">
       <Box
         sx={{
-          display: "flex",
+          display:
+            "flex",
 
           justifyContent:
             "space-between",
 
           alignItems: {
-            xs: "flex-start",
-            md: "center",
+            xs:
+              "flex-start",
+
+            md:
+              "center",
           },
 
           flexDirection: {
-            xs: "column",
-            md: "row",
+            xs:
+              "column",
+
+            md:
+              "row",
           },
 
-          gap: 2,
-          mb: 3,
+          gap:
+            2,
+
+          mb:
+            3,
         }}
       >
         <Box>
@@ -345,8 +607,11 @@ export default function Dashboard() {
             component="h1"
             variant="h4"
             sx={{
-              fontWeight: 900,
-              mb: 0.5,
+              fontWeight:
+                900,
+
+              mb:
+                0.5,
             }}
           >
             Maintenance Control Center
@@ -359,8 +624,8 @@ export default function Dashboard() {
                 "text.secondary",
             }}
           >
-            תמונת מצב אחזקה חיה ותובנות
-            ניהוליות על בסיס נתוני המערכת
+            תמונת מצב אחזקה חיה ותובנות ניהוליות
+            על בסיס נתוני המערכת
           </Typography>
 
           <Typography
@@ -369,9 +634,11 @@ export default function Dashboard() {
               color:
                 "text.secondary",
 
-              fontSize: 12,
+              fontSize:
+                12,
 
-              mt: 0.5,
+              mt:
+                0.5,
             }}
           >
             עדכון אחרון:{" "}
@@ -390,8 +657,11 @@ export default function Dashboard() {
             refreshDashboard
           }
           sx={{
-            minHeight: 46,
-            fontWeight: 900,
+            minHeight:
+              46,
+
+            fontWeight:
+              900,
           }}
         >
           רענן עכשיו
@@ -400,10 +670,12 @@ export default function Dashboard() {
 
       <Box
         sx={{
-          display: "grid",
+          display:
+            "grid",
 
           gridTemplateColumns: {
-            xs: "1fr",
+            xs:
+              "1fr",
 
             sm:
               "repeat(2, minmax(0, 1fr))",
@@ -412,8 +684,11 @@ export default function Dashboard() {
               "repeat(5, minmax(0, 1fr))",
           },
 
-          gap: 2,
-          mb: 3,
+          gap:
+            2,
+
+          mb:
+            3,
         }}
       >
         {stats.map(
@@ -428,343 +703,86 @@ export default function Dashboard() {
         )}
       </Box>
 
-      <ManagementRiskPanel
-        snapshot={
-          managementSnapshot
-        }
-      />
-
-      <Box
+      <Card
         sx={{
-          display: "grid",
+          borderRadius:
+            5,
 
-          gridTemplateColumns: {
-            xs: "1fr",
-            xl: "2fr 1fr",
-          },
+          mb:
+            3,
 
-          gap: 3,
-          mb: 3,
+          boxShadow:
+            "0 8px 24px rgba(15,23,42,0.08)",
         }}
       >
-        <Card
-          sx={{
-            borderRadius: 5,
+        <CardContent>
+          <Typography
+            component="h2"
+            variant="h6"
+            sx={{
+              fontWeight:
+                900,
 
-            boxShadow:
-              "0 8px 24px rgba(15,23,42,0.08)",
-          }}
-        >
-          <CardContent>
+              mb:
+                2,
+            }}
+          >
+            קריאות פתוחות ודחופות
+          </Typography>
+
+          {snapshot
+            .urgentOpenCalls
+            .length ===
+          0 ? (
             <Typography
-              component="h2"
-              variant="h6"
+              component="p"
               sx={{
-                fontWeight: 900,
-                mb: 2,
+                color:
+                  "text.secondary",
+
+                textAlign:
+                  "center",
+
+                py:
+                  4,
               }}
             >
-              קריאות פתוחות ודחופות
+              אין כרגע קריאות פתוחות.
             </Typography>
+          ) : (
+            <Box
+              sx={{
+                display:
+                  "flex",
 
-            {snapshot
-              .urgentOpenCalls
-              .length === 0 ? (
-              <Typography
-                component="p"
-                sx={{
-                  color:
-                    "text.secondary",
+                flexDirection:
+                  "column",
 
-                  textAlign:
-                    "center",
-
-                  py: 4,
-                }}
-              >
-                אין כרגע קריאות פתוחות.
-              </Typography>
-            ) : (
-              <Box
-                sx={{
-                  display:
-                    "flex",
-
-                  flexDirection:
-                    "column",
-
-                  gap: 1.5,
-                }}
-              >
-                {snapshot
-                  .urgentOpenCalls
-                  .map(
-                    (call) => {
-                      const priorityColor =
-                        getPriorityColor(
-                          call.priority,
-                        );
-
-                      return (
-                        <Box
-                          key={
-                            call.id
-                          }
-                          role="button"
-                          tabIndex={
-                            0
-                          }
-                          onClick={() =>
-                            openWorkOrder(
-                              call.id,
-                            )
-                          }
-                          onKeyDown={(
-                            event,
-                          ) => {
-                            if (
-                              event.key ===
-                                "Enter" ||
-                              event.key ===
-                                " "
-                            ) {
-                              openWorkOrder(
-                                call.id,
-                              );
-                            }
-                          }}
-                          sx={{
-                            display:
-                              "grid",
-
-                            gridTemplateColumns:
-                              {
-                                xs:
-                                  "1fr",
-
-                                md:
-                                  "1.2fr 2fr auto auto",
-                              },
-
-                            gap: 2,
-
-                            alignItems:
-                              "center",
-
-                            p: 2,
-
-                            borderRadius:
-                              3,
-
-                            bgcolor:
-                              "#F8FAFC",
-
-                            borderRight:
-                              `6px solid ${priorityColor}`,
-
-                            cursor:
-                              "pointer",
-
-                            transition:
-                              "transform 0.15s ease, box-shadow 0.15s ease",
-
-                            "&:hover":
-                              {
-                                bgcolor:
-                                  "#EEF2F7",
-
-                                transform:
-                                  "translateY(-2px)",
-
-                                boxShadow:
-                                  "0 6px 16px rgba(15,23,42,0.10)",
-                              },
-
-                            "&:focus-visible":
-                              {
-                                outline:
-                                  "3px solid #2563EB",
-
-                                outlineOffset:
-                                  "2px",
-                              },
-                          }}
-                        >
-                          <Box>
-                            <Typography
-                              component="div"
-                              sx={{
-                                fontWeight:
-                                  900,
-                              }}
-                            >
-                              {
-                                call.assetNumber
-                              }{" "}
-                              -{" "}
-                              {
-                                call.assetName
-                              }
-                            </Typography>
-
-                            <Typography
-                              component="div"
-                              sx={{
-                                color:
-                                  "text.secondary",
-
-                                fontSize:
-                                  12,
-                              }}
-                            >
-                              {
-                                call.workOrderNumber
-                              }
-                            </Typography>
-                          </Box>
-
-                          <Typography
-                            component="div"
-                            sx={{
-                              fontWeight:
-                                700,
-                            }}
-                          >
-                            {
-                              call.faultDescription
-                            }
-                          </Typography>
-
-                          <Box
-                            sx={{
-                              display:
-                                "flex",
-
-                              gap: 1,
-
-                              flexWrap:
-                                "wrap",
-                            }}
-                          >
-                            <Chip
-                              label={getPriorityLabel(
-                                call.priority,
-                              )}
-                              size="small"
-                              sx={{
-                                bgcolor:
-                                  priorityColor,
-
-                                color:
-                                  "white",
-
-                                fontWeight:
-                                  900,
-                              }}
-                            />
-
-                            {call.isDowntime && (
-                              <Chip
-                                label="משביתה"
-                                size="small"
-                                color="error"
-                              />
-                            )}
-                          </Box>
-
-                          <Typography
-                            component="div"
-                            sx={{
-                              fontWeight:
-                                900,
-
-                              color:
-                                priorityColor,
-
-                              whiteSpace:
-                                "nowrap",
-                            }}
-                          >
-                            {formatMinutes(
-                              call.openMinutes,
-                            )}
-                          </Typography>
-                        </Box>
+                gap:
+                  1.5,
+              }}
+            >
+              {snapshot
+                .urgentOpenCalls
+                .map(
+                  (call) => {
+                    const priorityColor =
+                      getPriorityColor(
+                        call.priority,
                       );
-                    },
-                  )}
-              </Box>
-            )}
-          </CardContent>
-        </Card>
 
-        <Card
-          sx={{
-            borderRadius: 5,
-
-            boxShadow:
-              "0 8px 24px rgba(15,23,42,0.08)",
-          }}
-        >
-          <CardContent>
-            <Typography
-              component="h2"
-              variant="h6"
-              sx={{
-                fontWeight: 900,
-                mb: 2,
-              }}
-            >
-              TOP 5 זמן השבתה
-            </Typography>
-
-            {snapshot
-              .topDowntimeAssets
-              .length === 0 ? (
-              <Typography
-                component="p"
-                sx={{
-                  color:
-                    "text.secondary",
-
-                  textAlign:
-                    "center",
-
-                  py: 4,
-                }}
-              >
-                עדיין אין נתוני השבתה.
-              </Typography>
-            ) : (
-              <Box
-                sx={{
-                  display:
-                    "flex",
-
-                  flexDirection:
-                    "column",
-
-                  gap: 1.5,
-                }}
-              >
-                {snapshot
-                  .topDowntimeAssets
-                  .map(
-                    (
-                      asset,
-                      index,
-                    ) => (
+                    return (
                       <Box
                         key={
-                          asset.assetId
+                          call.id
                         }
                         role="button"
                         tabIndex={
                           0
                         }
                         onClick={() =>
-                          openAsset(
-                            asset.assetNumber,
+                          openWorkOrder(
+                            call.id,
                           )
                         }
                         onKeyDown={(
@@ -776,41 +794,67 @@ export default function Dashboard() {
                             event.key ===
                               " "
                           ) {
-                            openAsset(
-                              asset.assetNumber,
+                            openWorkOrder(
+                              call.id,
                             );
                           }
                         }}
                         sx={{
                           display:
-                            "flex",
+                            "grid",
 
-                          justifyContent:
-                            "space-between",
+                          gridTemplateColumns:
+                            {
+                              xs:
+                                "1fr",
+
+                              md:
+                                "1.2fr 2fr auto auto",
+                            },
+
+                          gap:
+                            2,
 
                           alignItems:
                             "center",
 
-                          gap: 2,
-
-                          bgcolor:
-                            "#F8FAFC",
+                          p:
+                            2,
 
                           borderRadius:
                             3,
 
-                          p: 1.5,
+                          bgcolor:
+                            "#F8FAFC",
 
                           borderRight:
-                            "6px solid #DC2626",
+                            `6px solid ${priorityColor}`,
 
                           cursor:
                             "pointer",
+
+                          transition:
+                            "transform 0.15s ease, box-shadow 0.15s ease",
 
                           "&:hover":
                             {
                               bgcolor:
                                 "#EEF2F7",
+
+                              transform:
+                                "translateY(-2px)",
+
+                              boxShadow:
+                                "0 6px 16px rgba(15,23,42,0.10)",
+                            },
+
+                          "&:focus-visible":
+                            {
+                              outline:
+                                "3px solid #2563EB",
+
+                              outlineOffset:
+                                "2px",
                             },
                         }}
                       >
@@ -822,15 +866,12 @@ export default function Dashboard() {
                                 900,
                             }}
                           >
-                            {index +
-                              1}
-                            .{" "}
                             {
-                              asset.assetNumber
+                              call.assetNumber
                             }{" "}
                             -{" "}
                             {
-                              asset.assetName
+                              call.assetName
                             }
                           </Typography>
 
@@ -845,9 +886,59 @@ export default function Dashboard() {
                             }}
                           >
                             {
-                              asset.department
+                              call.workOrderNumber
                             }
                           </Typography>
+                        </Box>
+
+                        <Typography
+                          component="div"
+                          sx={{
+                            fontWeight:
+                              700,
+                          }}
+                        >
+                          {
+                            call.faultDescription
+                          }
+                        </Typography>
+
+                        <Box
+                          sx={{
+                            display:
+                              "flex",
+
+                            gap:
+                              1,
+
+                            flexWrap:
+                              "wrap",
+                          }}
+                        >
+                          <Chip
+                            label={getPriorityLabel(
+                              call.priority,
+                            )}
+                            size="small"
+                            sx={{
+                              bgcolor:
+                                priorityColor,
+
+                              color:
+                                "white",
+
+                              fontWeight:
+                                900,
+                            }}
+                          />
+
+                          {call.isDowntime && (
+                            <Chip
+                              label="משביתה"
+                              size="small"
+                              color="error"
+                            />
+                          )}
                         </Box>
 
                         <Typography
@@ -857,28 +948,419 @@ export default function Dashboard() {
                               900,
 
                             color:
-                              "#DC2626",
+                              priorityColor,
 
                             whiteSpace:
                               "nowrap",
                           }}
                         >
                           {formatMinutes(
-                            asset.downtimeMinutes,
+                            call.openMinutes,
                           )}
                         </Typography>
                       </Box>
-                    ),
-                  )}
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-      </Box>
+                    );
+                  },
+                )}
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      <ManagementRiskPanel
+        snapshot={
+          managementSnapshot
+        }
+      />
 
       <Card
         sx={{
-          borderRadius: 5,
+          borderRadius:
+            5,
+
+          mb:
+            3,
+
+          boxShadow:
+            "0 8px 24px rgba(15,23,42,0.08)",
+        }}
+      >
+        <CardContent>
+          <Box
+            sx={{
+              display:
+                "flex",
+
+              justifyContent:
+                "space-between",
+
+              alignItems: {
+                xs:
+                  "flex-start",
+
+                sm:
+                  "center",
+              },
+
+              flexDirection: {
+                xs:
+                  "column",
+
+                sm:
+                  "row",
+              },
+
+              gap:
+                1.5,
+
+              mb:
+                2,
+            }}
+          >
+            <Box>
+              <Typography
+                component="h2"
+                variant="h6"
+                sx={{
+                  fontWeight:
+                    900,
+
+                  mb:
+                    0.25,
+                }}
+              >
+                פעילות אחרונה במפעל
+              </Typography>
+
+              <Typography
+                component="div"
+                sx={{
+                  color:
+                    "text.secondary",
+
+                  fontSize:
+                    12,
+                }}
+              >
+                קריאות שירות וטיפולים מונעים לפי
+                סדר כרונולוגי
+              </Typography>
+            </Box>
+
+            <Typography
+              component="div"
+              sx={{
+                color:
+                  "text.secondary",
+
+                fontSize:
+                  12,
+
+                fontWeight:
+                  700,
+              }}
+            >
+              {activitySnapshot.totalActivities} אירועים
+              במערכת
+            </Typography>
+          </Box>
+
+          {activitySnapshot
+            .activities
+            .length ===
+          0 ? (
+            <Typography
+              component="p"
+              sx={{
+                color:
+                  "text.secondary",
+
+                textAlign:
+                  "center",
+
+                py:
+                  4,
+              }}
+            >
+              עדיין אין פעילות להצגה.
+            </Typography>
+          ) : (
+            <Box
+              sx={{
+                display:
+                  "flex",
+
+                flexDirection:
+                  "column",
+
+                gap:
+                  1.25,
+              }}
+            >
+              {activitySnapshot
+                .activities
+                .map(
+                  (activity) => {
+                    const severityColor =
+                      getActivitySeverityColor(
+                        activity.severity,
+                      );
+
+                    return (
+                      <Box
+                        key={
+                          activity.id
+                        }
+                        role="button"
+                        tabIndex={
+                          0
+                        }
+                        onClick={() =>
+                          openActivity(
+                            activity,
+                          )
+                        }
+                        onKeyDown={(
+                          event,
+                        ) => {
+                          if (
+                            event.key ===
+                              "Enter" ||
+                            event.key ===
+                              " "
+                          ) {
+                            openActivity(
+                              activity,
+                            );
+                          }
+                        }}
+                        sx={{
+                          display:
+                            "grid",
+
+                          gridTemplateColumns:
+                            {
+                              xs:
+                                "1fr",
+
+                              md:
+                                "auto 1.2fr 2fr auto",
+                            },
+
+                          gap:
+                            1.5,
+
+                          alignItems:
+                            "center",
+
+                          px:
+                            1.75,
+
+                          py:
+                            1.5,
+
+                          borderRadius:
+                            3,
+
+                          bgcolor:
+                            "#F8FAFC",
+
+                          borderRight:
+                            `6px solid ${severityColor}`,
+
+                          cursor:
+                            "pointer",
+
+                          transition:
+                            "background-color 0.15s ease, transform 0.15s ease",
+
+                          "&:hover":
+                            {
+                              bgcolor:
+                                "#EEF2F7",
+
+                              transform:
+                                "translateY(-1px)",
+                            },
+
+                          "&:focus-visible":
+                            {
+                              outline:
+                                "3px solid #2563EB",
+
+                              outlineOffset:
+                                "2px",
+                            },
+                        }}
+                      >
+                        <Chip
+                          label={getActivityChipLabel(
+                            activity,
+                          )}
+                          size="small"
+                          sx={{
+                            bgcolor:
+                              severityColor,
+
+                            color:
+                              "white",
+
+                            fontWeight:
+                              900,
+
+                            justifySelf: {
+                              xs:
+                                "flex-start",
+
+                              md:
+                                "stretch",
+                            },
+                          }}
+                        />
+
+                        <Box
+                          sx={{
+                            minWidth:
+                              0,
+                          }}
+                        >
+                          <Typography
+                            component="div"
+                            sx={{
+                              fontWeight:
+                                900,
+                            }}
+                          >
+                            {
+                              activity.title
+                            }
+                          </Typography>
+
+                          <Typography
+                            component="div"
+                            sx={{
+                              color:
+                                "text.secondary",
+
+                              fontSize:
+                                12,
+                            }}
+                          >
+                            {
+                              activity.sourceNumber
+                            }
+                          </Typography>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            minWidth:
+                              0,
+                          }}
+                        >
+                          <Typography
+                            component="div"
+                            sx={{
+                              fontWeight:
+                                800,
+                            }}
+                          >
+                            {
+                              activity.assetNumber
+                            }{" "}
+                            -{" "}
+                            {
+                              activity.assetName
+                            }
+                          </Typography>
+
+                          <Typography
+                            component="div"
+                            sx={{
+                              color:
+                                "text.secondary",
+
+                              fontSize:
+                                12,
+
+                              overflow:
+                                "hidden",
+
+                              textOverflow:
+                                "ellipsis",
+
+                              whiteSpace:
+                                "nowrap",
+                            }}
+                          >
+                            {
+                              activity.description
+                            }
+                          </Typography>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            textAlign: {
+                              xs:
+                                "right",
+
+                              md:
+                                "left",
+                            },
+
+                            whiteSpace:
+                              "nowrap",
+                          }}
+                        >
+                          <Typography
+                            component="div"
+                            sx={{
+                              fontWeight:
+                                900,
+
+                              color:
+                                severityColor,
+
+                              fontSize:
+                                12,
+                            }}
+                          >
+                            {formatRelativeTime(
+                              activity.occurredAt,
+                            )}
+                          </Typography>
+
+                          {activity.responsibleName && (
+                            <Typography
+                              component="div"
+                              sx={{
+                                color:
+                                  "text.secondary",
+
+                                fontSize:
+                                  11,
+                              }}
+                            >
+                              {
+                                activity.responsibleName
+                              }
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    );
+                  },
+                )}
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card
+        sx={{
+          borderRadius:
+            5,
 
           boxShadow:
             "0 8px 24px rgba(15,23,42,0.08)",
@@ -889,8 +1371,11 @@ export default function Dashboard() {
             component="h2"
             variant="h6"
             sx={{
-              fontWeight: 900,
-              mb: 3,
+              fontWeight:
+                900,
+
+              mb:
+                3,
             }}
           >
             מצב הנכסים במפעל
@@ -901,7 +1386,8 @@ export default function Dashboard() {
               display:
                 "grid",
 
-              gap: 3,
+              gap:
+                3,
             }}
           >
             {assetsByDepartment.map(
@@ -920,7 +1406,8 @@ export default function Dashboard() {
                       fontWeight:
                         900,
 
-                      mb: 1.5,
+                      mb:
+                        1.5,
                     }}
                   >
                     {department}
@@ -946,7 +1433,8 @@ export default function Dashboard() {
                             "repeat(4, minmax(0, 1fr))",
                         },
 
-                      gap: 1.5,
+                      gap:
+                        1.5,
                     }}
                   >
                     {departmentAssets.map(
@@ -994,7 +1482,8 @@ export default function Dashboard() {
                               borderRadius:
                                 3,
 
-                              p: 2,
+                              p:
+                                2,
 
                               borderRight:
                                 `8px solid ${statusColor}`,
@@ -1021,7 +1510,8 @@ export default function Dashboard() {
                                 fontWeight:
                                   900,
 
-                                mb: 0.5,
+                                mb:
+                                  0.5,
                               }}
                             >
                               {
@@ -1060,7 +1550,8 @@ export default function Dashboard() {
                                 fontSize:
                                   12,
 
-                                mt: 0.5,
+                                mt:
+                                  0.5,
                               }}
                             >
                               קריאות פתוחות:{" "}

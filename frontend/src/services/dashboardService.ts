@@ -19,14 +19,16 @@ import type {
  * RubberMIP
  * Asset-native Dashboard Service
  *
- * No Machine legacy fields are used here.
+ * The Dashboard is operational.
  *
- * Equipment identity:
+ * It is responsible for:
  *
- * assetId
- * assetCode
- * assetNumber
- * assetName
+ * - Current KPI
+ * - Open Work Orders
+ * - Current Asset Status
+ *
+ * Historical analysis belongs in
+ * the Analytics module.
  */
 
 export type DashboardOpenCall = {
@@ -54,20 +56,6 @@ export type DashboardOpenCall = {
   openedAt: string;
 
   openMinutes: number;
-};
-
-export type DashboardDowntimeAsset = {
-  assetId: string;
-
-  assetCode: string;
-
-  assetNumber: string;
-
-  assetName: string;
-
-  department: string;
-
-  downtimeMinutes: number;
 };
 
 export type DashboardAssetStatus = {
@@ -106,9 +94,6 @@ export type DashboardSnapshot = {
 
   urgentOpenCalls:
     DashboardOpenCall[];
-
-  topDowntimeAssets:
-    DashboardDowntimeAsset[];
 
   assetStatuses:
     DashboardAssetStatus[];
@@ -207,8 +192,8 @@ function getDashboardAssets() {
    * Plant-wide availability must count
    * primary operational assets only.
    *
-   * Sub-assets/components must not create
-   * duplicate planned operating capacity.
+   * Sub-assets and components must not
+   * create duplicate planned capacity.
    */
   return getLiveAssets().filter(
     (asset) =>
@@ -223,7 +208,7 @@ function getDashboardAssets() {
 }
 
 /* -------------------------------- */
-/* Downtime                         */
+/* Downtime overlap                 */
 /* -------------------------------- */
 
 function getOverlappingMinutes(
@@ -304,7 +289,8 @@ function calculateAvailabilityToday(
     getDashboardAssets();
 
   if (
-    assets.length === 0
+    assets.length ===
+    0
   ) {
     return {
       availability:
@@ -477,95 +463,6 @@ function buildUrgentOpenCalls(
             workOrder.openedAt,
           ),
       }),
-    );
-}
-
-/* -------------------------------- */
-/* Top downtime                     */
-/* -------------------------------- */
-
-function buildTopDowntimeAssets(
-  workOrders: WorkOrder[],
-): DashboardDowntimeAsset[] {
-  const downtimeByAsset =
-    new Map<
-      string,
-      DashboardDowntimeAsset
-    >();
-
-  workOrders
-    .filter(
-      (workOrder) =>
-        workOrder.type ===
-          "fault" &&
-        workOrder.isDowntime,
-    )
-    .forEach(
-      (workOrder) => {
-        const downtimeMinutes =
-          getElapsedMinutes(
-            workOrder.openedAt,
-            workOrder.closedAt,
-          );
-
-        const existing =
-          downtimeByAsset.get(
-            workOrder.assetId,
-          );
-
-        if (existing) {
-          downtimeByAsset.set(
-            workOrder.assetId,
-            {
-              ...existing,
-
-              downtimeMinutes:
-                existing.downtimeMinutes +
-                downtimeMinutes,
-            },
-          );
-
-          return;
-        }
-
-        downtimeByAsset.set(
-          workOrder.assetId,
-          {
-            assetId:
-              workOrder.assetId,
-
-            assetCode:
-              workOrder.assetCode,
-
-            assetNumber:
-              workOrder.assetNumber,
-
-            assetName:
-              workOrder.assetName,
-
-            department:
-              workOrder.department,
-
-            downtimeMinutes,
-          },
-        );
-      },
-    );
-
-  return Array.from(
-    downtimeByAsset.values(),
-  )
-    .sort(
-      (
-        first,
-        second,
-      ) =>
-        second.downtimeMinutes -
-        first.downtimeMinutes,
-    )
-    .slice(
-      0,
-      5,
     );
 }
 
@@ -758,11 +655,6 @@ export function getDashboardSnapshot():
 
     urgentOpenCalls:
       buildUrgentOpenCalls(
-        workOrders,
-      ),
-
-    topDowntimeAssets:
-      buildTopDowntimeAssets(
         workOrders,
       ),
 
