@@ -17,10 +17,6 @@ import MachineTimeline from "../components/machines/MachineTimeline";
 import MachineWorkOrdersPanel from "../components/machines/MachineWorkOrdersPanel";
 
 import {
-  assetToMachine,
-} from "../types/machine";
-
-import {
   getMieAssetSnapshot,
 } from "../engine/mie/mieService";
 
@@ -29,12 +25,16 @@ import {
 } from "../services/assetDetailsService";
 
 import {
-  getMachineMaintenanceSummary,
+  getAssetMaintenanceSummary,
 } from "../services/preventiveMaintenanceService";
 
 import {
   getAssetTimelineSnapshot,
 } from "../services/assetTimelineService";
+
+import {
+  assetToMachine,
+} from "../types/machine";
 
 export default function MachineDetails() {
   const {
@@ -53,14 +53,6 @@ export default function MachineDetails() {
         )
       : "";
 
-  /*
-   * The route still uses the historical
-   * "machineCode" parameter name for
-   * compatibility with the existing UI.
-   *
-   * Internally, the value represents
-   * the assetNumber.
-   */
   const assetSnapshot =
     assetNumber
       ? getAssetDetailsSnapshot(
@@ -76,23 +68,20 @@ export default function MachineDetails() {
           variant="h4"
           sx={{
             fontWeight: 900,
-
             mb: 1,
           }}
         >
-          המכונה לא נמצאה
+          הנכס לא נמצא
         </Typography>
 
         <Typography
           component="p"
           sx={{
-            color:
-              "text.secondary",
-
+            color: "text.secondary",
             mb: 2,
           }}
         >
-          לא נמצאה מכונה עם מספר:{" "}
+          לא נמצא נכס עם מספר:{" "}
           {assetNumber || "-"}
         </Typography>
 
@@ -107,7 +96,7 @@ export default function MachineDetails() {
             fontWeight: 900,
           }}
         >
-          חזרה למרכז המכונות
+          חזרה למרכז הנכסים
         </Button>
       </Box>
     );
@@ -115,30 +104,31 @@ export default function MachineDetails() {
 
   const {
     asset,
-
     openWorkOrders,
-
     closedWorkOrders,
-
     workOrderSummary,
-
     timeSummary,
   } = assetSnapshot;
 
   /*
-   * Existing UI components still expect
-   * Machine.
+   * רכיבי התצוגה הקיימים עדיין מקבלים
+   * את טיפוס Machine.
    *
-   * Asset is now the source of truth.
-   * This adapter keeps the current UI
-   * fully compatible during migration.
+   * מקור הנתונים בפועל הוא Asset.
+   * שכבת התצוגה תוסב בהמשך בנפרד.
    */
-  const machine =
-    assetToMachine(asset);
+  const assetDisplayModel =
+    assetToMachine(
+      asset,
+    );
 
+  /*
+   * Preventive Maintenance is linked
+   * through the immutable Asset ID.
+   */
   const maintenanceSummary =
-    getMachineMaintenanceSummary(
-      asset.assetNumber,
+    getAssetMaintenanceSummary(
+      asset.id,
     );
 
   const timelineSnapshot =
@@ -154,7 +144,9 @@ export default function MachineDetails() {
   return (
     <Box dir="rtl">
       <MachineHeader
-        machine={machine}
+        machine={
+          assetDisplayModel
+        }
         onBack={() =>
           navigate(
             "/machines",
@@ -170,14 +162,18 @@ export default function MachineDetails() {
         />
       )}
 
-      <MachineMaintenancePanel
-        summary={
-          maintenanceSummary
-        }
-      />
+      {maintenanceSummary && (
+        <MachineMaintenancePanel
+          summary={
+            maintenanceSummary
+          }
+        />
+      )}
 
       <MachineKpiPanel
-        machine={machine}
+        machine={
+          assetDisplayModel
+        }
         workOrderSummary={
           workOrderSummary
         }

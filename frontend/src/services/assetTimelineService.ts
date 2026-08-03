@@ -13,7 +13,7 @@ import {
 } from "./assetService";
 
 import {
-  getMachineExecutions,
+  getAssetExecutions,
 } from "./preventiveMaintenanceService";
 
 export type AssetTimelineEventType =
@@ -143,15 +143,21 @@ function getDurationMinutes(
     ).getTime();
 
   if (
-    Number.isNaN(startTime) ||
-    Number.isNaN(endTime) ||
-    endTime <= startTime
+    Number.isNaN(
+      startTime,
+    ) ||
+    Number.isNaN(
+      endTime,
+    ) ||
+    endTime <=
+      startTime
   ) {
     return null;
   }
 
   return Math.floor(
-    (endTime - startTime) /
+    (endTime -
+      startTime) /
       60000,
   );
 }
@@ -391,31 +397,36 @@ function getMaintenanceSeverity(
     MaintenanceExecutionStatus,
 ): AssetTimelineEventSeverity {
   if (
-    status === "overdue"
+    status ===
+    "overdue"
   ) {
     return "danger";
   }
 
   if (
-    status === "due"
+    status ===
+    "due"
   ) {
     return "warning";
   }
 
   if (
-    status === "in_progress"
+    status ===
+    "in_progress"
   ) {
     return "info";
   }
 
   if (
-    status === "completed"
+    status ===
+    "completed"
   ) {
     return "success";
   }
 
   if (
-    status === "cancelled"
+    status ===
+    "cancelled"
   ) {
     return "neutral";
   }
@@ -428,31 +439,36 @@ function getMaintenanceStatusLabel(
     MaintenanceExecutionStatus,
 ): string {
   if (
-    status === "overdue"
+    status ===
+    "overdue"
   ) {
     return "באיחור";
   }
 
   if (
-    status === "due"
+    status ===
+    "due"
   ) {
     return "לביצוע";
   }
 
   if (
-    status === "in_progress"
+    status ===
+    "in_progress"
   ) {
     return "בביצוע";
   }
 
   if (
-    status === "completed"
+    status ===
+    "completed"
   ) {
     return "הושלם";
   }
 
   if (
-    status === "cancelled"
+    status ===
+    "cancelled"
   ) {
     return "בוטל";
   }
@@ -593,7 +609,9 @@ function isWithinDays(
     ).getTime();
 
   if (
-    Number.isNaN(eventTime)
+    Number.isNaN(
+      eventTime,
+    )
   ) {
     return false;
   }
@@ -719,17 +737,9 @@ export function getAssetTimelineSnapshot(
       mapWorkOrderToTimelineEvent,
     );
 
-  /*
-   * preventiveMaintenanceService
-   * will be migrated next.
-   *
-   * Its current function name is still
-   * getMachineExecutions, but the data
-   * itself is already Asset-native.
-   */
   const maintenanceEvents =
-    getMachineExecutions(
-      asset.assetNumber,
+    getAssetExecutions(
+      asset.id,
     ).map(
       mapMaintenanceToTimelineEvent,
     );

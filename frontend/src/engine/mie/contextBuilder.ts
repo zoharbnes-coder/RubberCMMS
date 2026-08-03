@@ -1,4 +1,8 @@
 import type {
+  PreventiveMaintenanceExecution,
+} from "../../types/preventiveMaintenance";
+
+import type {
   WorkOrder,
 } from "../../types/workOrder";
 
@@ -7,18 +11,23 @@ import {
 } from "../../services/assetDetailsService";
 
 import {
-  getMachineExecutions,
-  getMachinePlans,
+  getAssetExecutions,
+  getAssetPlans,
 } from "../../services/preventiveMaintenanceService";
 
 import type {
   MieRuleContext,
 } from "./types";
 
+/* -------------------------------- */
+/* Date helpers                     */
+/* -------------------------------- */
+
 function getStartOfDaysAgo(
   days: number,
 ): number {
-  const date = new Date();
+  const date =
+    new Date();
 
   date.setHours(
     0,
@@ -35,44 +44,60 @@ function getStartOfDaysAgo(
   return date.getTime();
 }
 
-function isValidDateValue(
+function getDateTime(
   value: string,
-): boolean {
-  return !Number.isNaN(
+): number | null {
+  const time =
     new Date(
       value,
-    ).getTime(),
-  );
+    ).getTime();
+
+  if (
+    Number.isNaN(
+      time,
+    )
+  ) {
+    return null;
+  }
+
+  return time;
 }
 
 function isWithinLastDays(
   value: string,
   days: number,
 ): boolean {
-  if (
-    !isValidDateValue(
+  const time =
+    getDateTime(
       value,
-    )
+    );
+
+  if (
+    time === null
   ) {
     return false;
   }
 
   return (
-    new Date(
-      value,
-    ).getTime() >=
+    time >=
     getStartOfDaysAgo(
       days,
     )
   );
 }
 
-function getRecentWorkOrders(
+/* -------------------------------- */
+/* Work Order helpers               */
+/* -------------------------------- */
+
+function getRecentFaultWorkOrders(
   workOrders: WorkOrder[],
   days: number,
 ): WorkOrder[] {
   return workOrders.filter(
     (workOrder) =>
+      workOrder.type ===
+        "fault" &&
       isWithinLastDays(
         workOrder.openedAt,
         days,
@@ -85,9 +110,15 @@ function getDowntimeFailures(
 ): WorkOrder[] {
   return workOrders.filter(
     (workOrder) =>
+      workOrder.type ===
+        "fault" &&
       workOrder.isDowntime,
   );
 }
+
+/* -------------------------------- */
+/* Health score                     */
+/* -------------------------------- */
 
 function calculateBaseHealthScore(
   availabilityPercent: number,
@@ -109,6 +140,13 @@ function calculateBaseHealthScore(
       ),
     );
 
+  /*
+   * The base score currently derives
+   * from availability.
+   *
+   * MIE rules apply additional penalties
+   * for reliability and maintenance risks.
+   */
   return Math.max(
     60,
     Math.round(
@@ -117,58 +155,79 @@ function calculateBaseHealthScore(
   );
 }
 
-function getDuePmCount(
-  assetNumber: string,
-): number {
-  return getMachineExecutions(
-    assetNumber,
-  ).filter(
-    (execution) =>
-      execution.status ===
-      "due",
-  ).length;
+/* -------------------------------- */
+/* Preventive Maintenance helpers   */
+/* -------------------------------- */
+
+function isExecutionOverdue(
+  execution:
+    PreventiveMaintenanceExecution,
+  now: number,
+): boolean {
+  if (
+    execution.status ===
+      "completed" ||
+    execution.status ===
+      "cancelled"
+  ) {
+    return false;
+  }
+
+  if (
+    execution.status ===
+    "overdue"
+  ) {
+    return true;
+  }
+
+  const dueTime =
+    getDateTime(
+      execution.dueAt,
+    );
+
+  return (
+    dueTime !== null &&
+    dueTime < now
+  );
 }
 
-function getOverduePmCount(
-  assetNumber: string,
+function getDuePmCount(
+  executions:
+    PreventiveMaintenanceExecution[],
 ): number {
   const now =
     Date.now();
 
-  return getMachineExecutions(
-    assetNumber,
-  ).filter(
-    (execution) => {
-      if (
-        execution.status ===
-          "completed" ||
-        execution.status ===
-          "cancelled"
-      ) {
-        return false;
-      }
-
-      if (
-        execution.status ===
-        "overdue"
-      ) {
-        return true;
-      }
-
-      const dueTime =
-        new Date(
-          execution.dueAt,
-        ).getTime();
-
-      return (
-        !Number.isNaN(
-          dueTime,
-        ) &&
-        dueTime < now
-      );
-    },
+  return executions.filter(
+    (execution) =>
+      execution.status ===
+        "due" &&
+      !isExecutionOverdue(
+        execution,
+        now,
+      ),
   ).length;
 }
+
+function getOverduePmCount(
+  executions:
+    PreventiveMaintenanceExecution[],
+): number {
+  const now =
+    Date.now();
+
+  return executions.filter(
+    (execution) =>
+      isExecutionOverdue(
+        execution,
+        now,
+      ),
+  ).length;
+}
+
+/* -------------------------------- */
+/* MIE Context                      */
+/* -------------------------------- */
 
 export function buildMieRuleContext(
   assetNumber: string,
@@ -178,7 +237,9 @@ export function buildMieRuleContext(
       assetNumber,
     );
 
-  if (!assetSnapshot) {
+  if (
+    !assetSnapshot
+  ) {
     return null;
   }
 
@@ -190,31 +251,35 @@ export function buildMieRuleContext(
     timeSummary,
   } = assetSnapshot;
 
+  /*
+   * Preventive Maintenance is linked
+   * directly through immutable Asset ID.
+   */
   const preventiveMaintenancePlans =
-    getMachinePlans(
-      asset.assetNumber,
+    getAssetPlans(
+      asset.id,
     );
 
   const preventiveMaintenanceExecutions =
-    getMachineExecutions(
-      asset.assetNumber,
+    getAssetExecutions(
+      asset.id,
     );
 
-  const workOrdersLast7Days =
-    getRecentWorkOrders(
+  const faultWorkOrdersLast7Days =
+    getRecentFaultWorkOrders(
       workOrders,
       7,
     );
 
-  const workOrdersLast30Days =
-    getRecentWorkOrders(
+  const faultWorkOrdersLast30Days =
+    getRecentFaultWorkOrders(
       workOrders,
       30,
     );
 
   const downtimeFailuresLast30Days =
     getDowntimeFailures(
-      workOrdersLast30Days,
+      faultWorkOrdersLast30Days,
     );
 
   const availabilityPercent =
@@ -241,14 +306,13 @@ export function buildMieRuleContext(
       asset.assetCode,
 
     /*
-     * Legacy compatibility
+     * Temporary MIE compatibility field.
+     * It will be removed when MIE types
+     * are migrated in the next stage.
      */
     machineCode:
       asset.assetCode,
 
-    /*
-     * Asset is now the source of truth
-     */
     asset,
 
     /*
@@ -328,10 +392,10 @@ export function buildMieRuleContext(
      * Failure metrics
      */
     failuresLast7Days:
-      workOrdersLast7Days.length,
+      faultWorkOrdersLast7Days.length,
 
     failuresLast30Days:
-      workOrdersLast30Days.length,
+      faultWorkOrdersLast30Days.length,
 
     downtimeFailuresLast30Days:
       downtimeFailuresLast30Days.length,
@@ -341,12 +405,12 @@ export function buildMieRuleContext(
      */
     overduePmCount:
       getOverduePmCount(
-        asset.assetNumber,
+        preventiveMaintenanceExecutions,
       ),
 
     duePmCount:
       getDuePmCount(
-        asset.assetNumber,
+        preventiveMaintenanceExecutions,
       ),
   };
 }
