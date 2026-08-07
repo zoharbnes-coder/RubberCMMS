@@ -20,6 +20,7 @@ import TopDowntimeAssetsTable from "../components/analytics/TopDowntimeAssetsTab
 import ReliabilityTrendPanel from "../components/analytics/ReliabilityTrendPanel";
 import FailureParetoPanel from "../components/analytics/FailureParetoPanel";
 import RepeatedFailuresPanel from "../components/analytics/RepeatedFailuresPanel";
+import PmCompliancePanel from "../components/analytics/PmCompliancePanel";
 
 import {
   getAnalyticsExecutiveSnapshot,
@@ -32,6 +33,11 @@ import {
   getReliabilityAnalyticsSnapshot,
   type ReliabilityAnalyticsSnapshot,
 } from "../services/reliabilityAnalyticsService";
+
+import {
+  getPmComplianceSnapshot,
+  type PmComplianceSnapshot,
+} from "../services/pmAnalyticsService";
 
 /* -------------------------------- */
 /* Labels                           */
@@ -100,6 +106,16 @@ export default function Analytics() {
       ),
     );
 
+  const [
+    pmSnapshot,
+    setPmSnapshot,
+  ] =
+    useState<PmComplianceSnapshot>(
+      getPmComplianceSnapshot(
+        getDefaultAnalyticsFilters(),
+      ),
+    );
+
   function applyFilters():
     void {
     setSnapshot(
@@ -110,6 +126,12 @@ export default function Analytics() {
 
     setReliabilitySnapshot(
       getReliabilityAnalyticsSnapshot(
+        filters,
+      ),
+    );
+
+    setPmSnapshot(
+      getPmComplianceSnapshot(
         filters,
       ),
     );
@@ -132,6 +154,12 @@ export default function Analytics() {
 
     setReliabilitySnapshot(
       getReliabilityAnalyticsSnapshot(
+        defaultFilters,
+      ),
+    );
+
+    setPmSnapshot(
+      getPmComplianceSnapshot(
         defaultFilters,
       ),
     );
@@ -307,6 +335,15 @@ export default function Analytics() {
       <RepeatedFailuresPanel
         items={
           reliabilitySnapshot.repeatedFailures
+        }
+        onOpenAsset={
+          openAsset
+        }
+      />
+
+      <PmCompliancePanel
+        snapshot={
+          pmSnapshot
         }
         onOpenAsset={
           openAsset
