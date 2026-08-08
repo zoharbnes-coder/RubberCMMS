@@ -10,6 +10,11 @@ export type AssetStatus =
   | "alarm"
   | "maintenance";
 
+export type AssetLifecycleStatus =
+  | "active"
+  | "suspended"
+  | "archived";
+
 export type AssetType =
   | "machine"
   | "production-line"
@@ -92,6 +97,32 @@ export type Asset = {
   criticality: AssetCriticality;
   status: AssetStatus;
 
+  /*
+   * Asset lifecycle
+   *
+   * Transitional field:
+   * lifecycleStatus is optional during
+   * the migration so existing Asset and
+   * Machine repositories continue to work.
+   *
+   * During migration:
+   * - missing lifecycleStatus + active=true
+   *   should be interpreted as "active"
+   * - missing lifecycleStatus + active=false
+   *   should be interpreted as "suspended"
+   *
+   * Later, after all repositories and UI
+   * use lifecycleStatus, this field can be
+   * made required and active can be removed.
+   */
+  lifecycleStatus?: AssetLifecycleStatus;
+
+  /*
+   * Legacy compatibility.
+   * Existing Dashboard, Analytics, PM,
+   * Work Orders and Machine adapters still
+   * depend on this field.
+   */
   active: boolean;
 
   /*
@@ -116,6 +147,9 @@ export type Asset = {
    *   └─ Mixer
    *       └─ Gearbox
    *           └─ Bearing
+   *
+   * A department may also contain only
+   * one machine with no children.
    */
   parentAssetId: string | null;
   rootAssetId: string | null;
@@ -185,6 +219,16 @@ export type CreateAssetInput = {
   criticality: AssetCriticality;
   status: AssetStatus;
 
+  /*
+   * Optional during migration.
+   * New Plant Structure code will provide
+   * this explicitly.
+   */
+  lifecycleStatus?: AssetLifecycleStatus;
+
+  /*
+   * Kept temporarily for compatibility.
+   */
   active: boolean;
 
   plant: string;

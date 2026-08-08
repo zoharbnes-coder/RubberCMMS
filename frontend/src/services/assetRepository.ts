@@ -10,6 +10,7 @@ import type {
   Asset,
   AssetCriticality,
   AssetHierarchyLevel,
+  AssetLifecycleStatus,
   AssetRepositoryResult,
   AssetStatus,
   AssetType,
@@ -80,6 +81,16 @@ function isAssetStatus(
   );
 }
 
+function isAssetLifecycleStatus(
+  value: unknown
+): value is AssetLifecycleStatus {
+  return (
+    value === "active" ||
+    value === "suspended" ||
+    value === "archived"
+  );
+}
+
 function isAssetType(
   value: unknown
 ): value is AssetType {
@@ -147,7 +158,13 @@ function isAsset(
       asset.criticality
     ) &&
     isAssetStatus(asset.status) &&
-    typeof asset.active === "boolean"
+    typeof asset.active === "boolean" &&
+    (
+      asset.lifecycleStatus === undefined ||
+      isAssetLifecycleStatus(
+        asset.lifecycleStatus
+      )
+    )
   );
 }
 
@@ -175,11 +192,32 @@ function sanitizeAvailability(
   );
 }
 
+function resolveLifecycleStatus(
+  asset: Asset
+): AssetLifecycleStatus {
+  if (
+    isAssetLifecycleStatus(
+      asset.lifecycleStatus
+    )
+  ) {
+    return asset.lifecycleStatus;
+  }
+
+  return asset.active
+    ? "active"
+    : "suspended";
+}
+
 function sanitizeAsset(
   asset: Asset
 ): Asset {
   const now =
     getCurrentTimestamp();
+
+  const lifecycleStatus =
+    resolveLifecycleStatus(
+      asset
+    );
 
   return {
     ...asset,
@@ -235,8 +273,11 @@ function sanitizeAsset(
         ? asset.status
         : "running",
 
+    lifecycleStatus,
+
     active:
-      Boolean(asset.active),
+      lifecycleStatus ===
+      "active",
 
     plant:
       normalizeText(asset.plant),
@@ -471,6 +512,14 @@ function loadAssets(): Asset[] {
       return initialAssets;
     }
 
+    /*
+     * Persist the migrated lifecycle fields
+     * back to storage automatically.
+     */
+    saveAssets(
+      validAssets
+    );
+
     return validAssets;
   } catch {
     const initialAssets =
@@ -656,6 +705,14 @@ function buildAsset(
   const parentAssetId =
     input.parentAssetId || null;
 
+  const lifecycleStatus =
+    input.lifecycleStatus ??
+    (
+      input.active
+        ? "active"
+        : "suspended"
+    );
+
   return sanitizeAsset({
     id: assetId,
 
@@ -684,8 +741,11 @@ function buildAsset(
     status:
       input.status,
 
+    lifecycleStatus,
+
     active:
-      input.active,
+      lifecycleStatus ===
+      "active",
 
     plant:
       input.plant,
@@ -802,7 +862,8 @@ export function getActiveAssets():
   Asset[] {
   return loadAssets().filter(
     (asset) =>
-      asset.active
+      asset.lifecycleStatus ===
+      "active"
   );
 }
 
@@ -810,7 +871,26 @@ export function getInactiveAssets():
   Asset[] {
   return loadAssets().filter(
     (asset) =>
-      !asset.active
+      asset.lifecycleStatus !==
+      "active"
+  );
+}
+
+export function getSuspendedAssets():
+  Asset[] {
+  return loadAssets().filter(
+    (asset) =>
+      asset.lifecycleStatus ===
+      "suspended"
+  );
+}
+
+export function getArchivedAssets():
+  Asset[] {
+  return loadAssets().filter(
+    (asset) =>
+      asset.lifecycleStatus ===
+      "archived"
   );
 }
 
@@ -1078,6 +1158,18 @@ export function updateAsset(
   const currentAsset =
     assets[assetIndex];
 
+  const lifecycleStatus =
+    updates.lifecycleStatus ??
+    currentAsset.lifecycleStatus ??
+    (
+      (
+        updates.active ??
+        currentAsset.active
+      )
+        ? "active"
+        : "suspended"
+    );
+
   const candidateInput:
     CreateAssetInput = {
       assetNumber:
@@ -1112,9 +1204,11 @@ export function updateAsset(
         updates.status ??
         currentAsset.status,
 
+      lifecycleStatus,
+
       active:
-        updates.active ??
-        currentAsset.active,
+        lifecycleStatus ===
+        "active",
 
       plant:
         updates.plant ??
@@ -1296,18 +1390,89 @@ export function updateAsset(
   };
 }
 
-export function setAssetActive(
+export function setAssetLifecycleStatus(
   assetId: string,
-  active: boolean
+  lifecycleStatus:
+    AssetLifecycleStatus
 ): AssetRepositoryResult {
   return updateAsset(
     assetId,
     {
-      active,
+      lifecycleStatus,
 
-      status: active
-        ? "running"
-        : "maintenance",
+      active:
+        lifecycleStatus ===
+        "active",
+
+      status:
+        lifecycleStatus ===
+        "active"
+          ? "running"
+          : "maintenance",
+    }
+  );
+}
+
+export function suspendAsset(
+  assetId: string
+): AssetRepositoryResult {
+  return setAssetLifecycleStatus(
+    assetId,
+    "suspended"
+  );
+}
+
+export function reactivateAsset(
+  assetId: string
+): AssetRepositoryResult {
+  return setAssetLifecycleStatus(
+    assetId,
+    "active"
+  );
+}
+
+export function archiveAsset(
+  assetId: string
+): AssetRepositoryResult {
+  return setAssetLifecycleStatus(
+    assetId,
+    "archived"
+  );
+}
+
+export function setAssetActive(
+  assetId: string,
+  active: boolean
+): AssetRepositoryResult {
+  return setAssetLifecycleStatus(
+    assetId,
+    active
+      ? "active"
+      : "suspended"
+  );
+}
+
+export function moveAsset(
+  assetId: string,
+  department: string,
+  area: string,
+  parentAssetId:
+    string | null = null
+): AssetRepositoryResult {
+  return updateAsset(
+    assetId,
+    {
+      department:
+        normalizeText(
+          department
+        ),
+
+      area:
+        normalizeText(
+          area
+        ),
+
+      parentAssetId,
     }
   );
 }
