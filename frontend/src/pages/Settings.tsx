@@ -18,6 +18,7 @@ import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
 import TuneIcon from "@mui/icons-material/Tune";
 
 import UsersSettingsPanel from "../components/settings/UsersSettingsPanel";
+import PlantStructureSettingsPanel from "../components/settings/PlantStructureSettingsPanel";
 
 import {
   useState,
@@ -475,6 +476,9 @@ export default function Settings() {
               getCurrentUsername()
             }
           />
+        ) : selectedSection ===
+          "plant_structure" ? (
+          <PlantStructureSettingsPanel />
         ) : (
           <SettingsSectionPlaceholder
             sectionId={
